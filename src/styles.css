@@ -158,3 +158,39 @@ app-root, .stage, .range-form { min-width: 0; }
 
 .elapsed-summary .summary-select { margin: 0; font-size: 12px; color: var(--white); gap: 7px; align-items: start; }
 .elapsed-summary .summary-select input { width: 16px; height: 16px; flex-shrink: 0; }
+.storage-banner { margin: 20px 0; padding: 20px; border: 1px solid var(--accent); border-radius: 16px; background: #102b32; text-align: left; }
+.storage-banner h2 { margin: 0 0 10px; font-size: 18px; color: var(--ice); }
+.storage-banner p { font-size: 13px; line-height: 1.6; color: #c0d3dc; }
+.storage-banner-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.storage-banner-actions button { padding: 10px 14px; border: 1px solid #5a888e; border-radius: 8px; background: #16333a; color: var(--ice); font: inherit; cursor: pointer; }
+.storage-banner-actions button:first-child { background: var(--accent); color: #07131d; border-color: var(--accent); }
+.storage-banner-actions button:focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; }
+.storage-banner-actions button:disabled { opacity: .5; }
+.storage-setting .display-toggle { margin: 0; }
+.storage-setting .range-help { margin-bottom: 0; }
+
+/* Mirror the display around the dial centre without changing its dimensions. */
+.digital.digital-above { top: auto; bottom: 58%; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.stage { padding-top: 70px; }
+.language-picker { position: fixed; z-index: 20; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); margin: 0; padding: 4px; border-radius: 9px; background: #080e14ed; }
+.language-picker select, .popup-language select { margin: 0; padding: 7px 10px; border: 1px solid #395762; border-radius: 7px; background: #07131d; color: var(--ice); font: inherit; }
+.storage-popup { width: min(680px, calc(100% - 24px)); max-height: calc(100dvh - 32px); margin: auto; padding: 22px; overflow-y: auto; color: var(--white); box-shadow: 0 20px 90px #000b; }
+.storage-popup::backdrop { background: #02080dd9; }
+.storage-popup-header { display: flex; align-items: start; gap: 12px; }
+.storage-popup-header h2 { flex: 1; }
+.popup-close { padding: 0 6px; background: transparent; border: 0; font-size: 26px; line-height: 1; color: var(--ice); cursor: pointer; }
+.popup-close:focus-visible, .install-instructions summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.install-instructions { margin: 18px 0; padding: 12px; border: 1px solid #426e73; border-radius: 9px; }
+.install-instructions summary { cursor: pointer; color: var(--ice); font-size: 14px; }
+.install-instructions h3 { color: var(--ice); font-size: 14px; }
+.install-instructions ol { padding-left: 20px; color: #c0d3dc; font-size: 13px; line-height: 1.6; }
+.install-instructions li + li { margin-top: 7px; }
+.storage-dialog-error { color: #ffb4ab !important; }
+.storage-info-button { margin-top: 12px; }
+@media (max-width: 480px) {
+  .stage { padding-top: 70px; }
+  .storage-popup { padding: 16px; }
+  .storage-popup-header { gap: 8px; }
+  .storage-popup-header h2 { font-size: 16px; }
+}

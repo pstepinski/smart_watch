@@ -2,6 +2,7 @@ import { chromium, expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createState } from '../src/app/models.ts';
+import { CONSENT_KEY } from '../src/app/storage-consent.ts';
 import { STORAGE_KEY } from '../src/app/persistence.ts';
 import type { Mode } from '../src/app/models.ts';
 
@@ -40,13 +41,16 @@ try {
   const context = await browser.newContext({ viewport: { width: 1200, height: 1100 }, locale: 'en-GB', timezoneId: 'Europe/Warsaw', serviceWorkers: 'block', reducedMotion: 'reduce' });
   let page = await context.newPage();
   let viewport = { width: 1200, height: 1100 };
-  async function load(mode: Mode, single = false) {
+  async function load(mode: Mode, single = false, allowed = true) {
     await page.close();
     page = await context.newPage();
     await page.setViewportSize(viewport);
     await page.clock.setFixedTime(demoTime);
-    await page.addInitScript(({ key, state }) => localStorage.setItem(key, JSON.stringify(state)), {
-      key: STORAGE_KEY, state: { ...demo, mode, countdownMode: single ? 'single' : 'all' }
+    await page.addInitScript(({ key, consentKey, state, allowed }) => {
+      localStorage.setItem(key, JSON.stringify(state));
+      if (allowed) localStorage.setItem(consentKey, 'granted'); else localStorage.removeItem(consentKey);
+    }, {
+      key: STORAGE_KEY, consentKey: CONSENT_KEY, allowed, state: { ...demo, mode, countdownMode: single ? 'single' : 'all' }
     });
     await page.goto(baseURL);
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
@@ -58,6 +62,7 @@ try {
     console.log(`Saved docs/screenshots/${name}.png`);
   }
   await load('clock'); await capture('clock');
+  await load('clock', false, false); await capture('storage-consent');
   await load('countdown'); await capture('countdown-all');
   await load('countdown', true); await capture('countdown-single');
   await load('stopwatch'); await capture('count-from');

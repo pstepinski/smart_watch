@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { afterRenderEffect, Component, computed, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SwUpdate } from '@angular/service-worker';
 import { I18nService } from './i18n.service';
@@ -36,6 +36,8 @@ export class AppComponent implements OnDestroy {
   private readonly interval = window.setInterval(() => this.now.set(Date.now()), 50);
   readonly installPrompt = signal<InstallEvent | null>(null);
   readonly updateReady = signal(false);
+  readonly storageNotice = signal('');
+  readonly storageDialog = viewChild.required<ElementRef<HTMLDialogElement>>('storageDialog');
   private readonly saveOnLeave = () => this.storage.save();
   private readonly visibilityChanged = () => { if (document.hidden) this.storage.save(); else this.now.set(Date.now()); };
   private readonly beforeInstall = (event: Event) => { event.preventDefault(); this.installPrompt.set(event as InstallEvent); };
@@ -108,11 +110,18 @@ export class AppComponent implements OnDestroy {
     return {
       hasOverview: this.state.mode === 'stopwatch' || (this.state.mode === 'countdown' && this.state.countdownMode === 'all'),
       processes, visibleProcesses: processes.filter(item => item.entry.visible), showProcessPercent: processes.some(item => item.entry.visible && item.entry.startTime), countFrom, rings, digitalTime, digitalLabel, compact, timerElapsed, currentTime: localTime(now),
+      digitalAbove: now.getHours() % 12 >= 3 && now.getHours() % 12 < 9,
       secondAngle: `${seconds * 6}deg`, minuteAngle: `${minutes * 6}deg`, hourAngle: `${((now.getHours() % 12) + minutes / 60) * 30}deg`,
       dateLabel: new Intl.DateTimeFormat(language === 'en' ? 'en-GB' : 'pl-PL', { day: 'numeric', month: 'long', weekday: 'long' }).format(now)
     };
   });
   constructor() {
+    afterRenderEffect(() => {
+      const dialog = this.storageDialog().nativeElement;
+      if (this.storage.showBanner()) {
+        if (!dialog.open) dialog.showModal();
+      } else if (dialog.open) dialog.close();
+    });
     window.addEventListener('pagehide', this.saveOnLeave);
     document.addEventListener('visibilitychange', this.visibilityChanged);
     window.addEventListener('beforeinstallprompt', this.beforeInstall);
@@ -130,6 +139,38 @@ export class AppComponent implements OnDestroy {
     this.storage.save();
     this.revision.update(value => value + 1);
     this.now.set(Date.now());
+  }
+  openStorageInfo(): void {
+    const dialog = this.storageDialog().nativeElement;
+    if (!dialog.open) dialog.showModal();
+  }
+  closeStorageInfo(event?: Event): void {
+    event?.preventDefault();
+    if (this.storage.busy()) return;
+    this.storage.continueWithoutSaving();
+    this.storageDialog().nativeElement.close();
+  }
+  async allowStorage(): Promise<void> {
+    if (await this.storage.enable()) {
+      this.storageDialog().nativeElement.close();
+      this.monotonicStart = performance.now() - (restoredTimerElapsed(this.state.timer, Date.now()) - this.state.timer.accumulated);
+      this.i18n.syncLanguage();
+      this.storageNotice.set('');
+      this.revision.update(value => value + 1);
+    }
+  }
+  async toggleStorage(event: Event): Promise<void> {
+    const checkbox = event.target as HTMLInputElement;
+    if (checkbox.checked) await this.allowStorage();
+    else if (window.confirm(this.t('Wyłączenie zapisu usunie zapisane ustawienia, procesy, zegary świata, historię stopera i pliki offline tej aplikacji oraz przywróci ustawienia domyślne. Czy kontynuować?'))) {
+      if (await this.storage.disable()) {
+        this.monotonicStart = performance.now();
+        this.updateReady.set(false);
+        this.storageNotice.set('Dane aplikacji zostały usunięte. Nowe zmiany pozostają tylko w pamięci tej karty.');
+        this.revision.update(value => value + 1);
+      }
+    }
+    checkbox.checked = this.storage.enabled();
   }
   selectTab(mode: Mode): void { this.state.mode = mode; this.changed(); }
   tabKey(event: KeyboardEvent, index: number): void {

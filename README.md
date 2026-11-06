@@ -2,7 +2,7 @@
 
 **by Piotr Stępiński**
 
-Zegarek analogowo-cyfrowy, odliczanie do i od wybranego momentu, stoper z okrążeniami oraz zegary świata. Aplikacja jest napisana w Angularze, działa jako PWA i zapisuje ustawienia na urządzeniu. Interfejs obsługuje **PL i EN**.
+Zegarek analogowo-cyfrowy, odliczanie do i od wybranego momentu, stoper z okrążeniami oraz zegary świata. Aplikacja jest napisana w Angularze, działa jako PWA i po zgodzie użytkownika zapisuje ustawienia na urządzeniu. Interfejs obsługuje **PL i EN**.
 
 ## Spis treści
 
@@ -101,9 +101,11 @@ Nie otwieraj plików aplikacji przez `file://`; Angular i PWA wymagają serwera 
 | Stoper | Stopwatch | Pomiar uruchamiany przyciskiem, pauza i okrążenia. |
 | Zegary świata | World clocks | Równoczesne zegary wybranych miast. |
 
-- **Język PL/EN:** przy pierwszym uruchomieniu wybierany jest polski dla języka przeglądarki `pl`, a angielski dla pozostałych języków. Wybór w selektorze nad zakładkami jest zapisywany i ma pierwszeństwo przy kolejnym otwarciu. Tłumaczone są także formularze, komunikaty, nazwy jednostek, gotowe zestawy, daty i etykiety dostępności. Własne nazwy procesów pozostają zachowane.
+- **Zgoda na zapis:** przy pierwszym wejściu pojawia się popup z przyciskami `Allow saving` i `Continue without saving`. Do czasu zgody ustawienia i wyniki są tylko w pamięci karty, bez rejestrowania nowego service workera. Po zgodzie zapisywane są dane i sam wybór, więc popup nie wraca. Po odmowie jest ukryty w bieżącym otwarciu strony; po odświeżeniu lub następnym wejściu wraca.
+- **Przełącznik zapisu:** `Save data on this device` jest dostępny we wszystkich zakładkach. Włącza zapamiętywanie; wyłączenie wymaga potwierdzenia usunięcia danych. Anulowanie pozostawia zapis i dane bez zmian. Po potwierdzeniu usuwane są dane, zgoda i pliki offline aplikacji, a ustawienia i pomiary wracają do wartości domyślnych. Nowe zmiany pozostają wyłącznie w pamięci karty. Cofnięcie zgody jest respektowane także w innych otwartych kartach.
+- **Język PL/EN:** selektor z flagami 🇵🇱 / 🇬🇧 znajduje się w prawym górnym rogu ekranu; popup ma również własny selektor języka. Przy pierwszym uruchomieniu wybierany jest polski dla języka przeglądarki `pl`, a angielski dla pozostałych języków. Przy włączonym zapisie wybór w selektorze w prawym górnym rogu jest zapamiętywany i ma pierwszeństwo przy kolejnym otwarciu. Tłumaczone są także formularze, komunikaty, nazwy jednostek, gotowe zestawy, daty i etykiety dostępności. Własne nazwy procesów pozostają zachowane.
 - **Tarcza:** aktualna godzina jest pokazywana wskazówkami godzinową, minutową i sekundową. Pierścienie są wewnątrz cyfr 12, 3, 6 i 9. Wskazówki nadal pokazują bieżącą godzinę także podczas odliczania i pomiaru stopera; czas procesu prezentują pierścienie i wyświetlacz.
-- **Wyświetlacz cyfrowy:** wspólny przełącznik pokazuje lub ukrywa wyświetlacz na głównej tarczy. Jego położenie i wymiary są takie same w poszczególnych trybach. Długie wartości dopasowują rozmiar tekstu; długa nazwa jest skracana wielokropkiem.
+- **Wyświetlacz cyfrowy:** wspólny przełącznik pokazuje lub ukrywa wyświetlacz na głównej tarczy. Wymiary wyświetlacza są takie same w poszczególnych trybach. Położenie zależy od wskazówki godzinowej: przy wskazówce w górnej połowie tarczy wyświetlacz jest na dole, a przy wskazówce w dolnej połowie — na górze. Przełączenie następuje o 3:00 i 9:00 w każdym cyklu 12-godzinnym, we wszystkich trybach z główną tarczą. Długie wartości dopasowują rozmiar tekstu; długa nazwa jest skracana wielokropkiem.
 - **Data i godzina pod tarczą:** pokazują bieżący czas urządzenia niezależnie od wybranego procesu.
 - **Nawigacja:** zakładki obsługują kliknięcie oraz klawiaturę: strzałki lewo/prawo, `Home` i `End`. Elementy formularzy mają etykiety i widoczny fokus.
 - **Małe ekrany:** w widoku wszystkich procesów „Odliczania do” oraz w „Odliczaniu od” zegarek i podsumowanie tworzą przy szerokości do **700 px** dwie karty karuzeli. Przesuwaj palcem w poziomie lub użyj przycisków `Clock` / `Processes`. Na szerokim ekranie tabela stoi obok zegarka. Szerokie tabele edycji można przewijać poziomo.
@@ -122,7 +124,7 @@ Widok samego zegarka: tarcza analogowa, cyfrowa godzina z sekundami i data. Nie 
 
 Można dodawać i usuwać wiele procesów. Każdy ma własną nazwę, początek, koniec i kolor z palety: miętowy, niebieski, fioletowy, różowy, pomarańczowy lub żółty. Domyślny proces ma godziny **08:00–16:00**.
 
-Zmiany są stosowane i zapisywane automatycznie. Nieprawidłowy lub niekompletny zakres pokazuje komunikat; nie jest rysowany jego pierścień.
+Zmiany są stosowane automatycznie, a przy włączonej zgodzie na zapis również zapamiętywane. Nieprawidłowy lub niekompletny zakres pokazuje komunikat; nie jest rysowany jego pierścień.
 
 | Wprowadzone dane | Zasada działania |
 | --- | --- |
@@ -286,7 +288,19 @@ Większe zaznaczone jednostki są odejmowane od mniejszych. Dlatego 18 miesięcy
 
 ## Zapis danych i restart
 
-Stan jest zapisywany automatycznie w **localStorage**, pod kluczem `horizon.state.v1`. Nazwa klucza i techniczna nazwa projektu Docker pozostały zgodne z wcześniejszymi wersjami aplikacji.
+### Zgoda i wyłączenie zapisu
+
+Popup wyjaśnia lokalne przechowywanie danych i pobranie kopii aplikacji do działania offline. Można go później otworzyć przyciskiem **Storage and installation information** / **Informacje o zapisie i instalacji**, bez zmiany wcześniej udzielonej zgody. Popup zawiera rozwijaną instrukcję instalacji na Androidzie i iOS. Przycisk × oraz klawisz Escape zamykają okno; samo zamknięcie nie udziela zgody. Można wyrazić zgodę albo korzystać bez zapisu. Samo wyświetlenie strony, zmiana zakładki, języka czy procesów przed zgodą nie zapisują tych ustawień. Wcześniejsze dane z wersji bez bannera mogą zostać przywrócone po zgodzie, jeśli użytkownik nie zmienił już bieżących danych sesji.
+
+![Data storage — pierwszy popup EN z wyborem zgody lub pracy bez zapisu](docs/screenshots/storage-consent.png)
+
+Przełącznik `Save data on this device` umożliwia późniejsze włączenie i wyłączenie. Przy wyłączeniu pojawia się pytanie o potwierdzenie. Potwierdzenie usuwa zapisane ustawienia, procesy, zegary świata i historię stopera, zeruje bieżący pomiar oraz przywraca wartości domyślne. Usuwa także zgodę, rejestrację service workera i należący do aplikacji cache Angular PWA. Inne dane witryny nie są kasowane zbiorczym `localStorage.clear()` ani czyszczeniem całego Cache Storage. Standardowy cache HTTP przeglądarki jest zarządzany przez samą przeglądarkę.
+
+Po wyłączeniu można nadal używać aplikacji bez zapisywania. Przy kolejnym wejściu popup wróci, ponieważ zgoda została usunięta. Przy ponownym włączeniu zapisywany jest bieżący stan i zgoda. Jeśli przeglądarka blokuje zapis lub usunięcie, aplikacja pokazuje komunikat błędu.
+
+### Zakres zapisu
+
+Po zgodzie stan jest zapisywany automatycznie w **localStorage**, pod kluczem `horizon.state.v1`. Nazwa klucza i techniczna nazwa projektu Docker pozostały zgodne z wcześniejszymi wersjami aplikacji. Zgoda jest przechowywana osobno pod kluczem `horizon.storageConsent.v1`; brak zgody wyłącza zapisywanie stanu.
 
 Zapisywane są:
 
@@ -296,7 +310,7 @@ Zapisywane są:
 - stan stopera: bieg/pauza/stop, czas, numer sesji i okrążenia, punkt ostatniego wyniku i pełna historia;
 - lista zegarów świata: nazwy, strefy i widoczność, również po usunięciu wszystkich pozycji.
 
-Po zamknięciu aplikacji lub restarcie urządzenia **uruchomiony stoper uwzględnia upływ czasu zamknięcia**, a **pauza pozostaje na pauzie**. Podczas otwartej sesji stoper używa zegara monotonicznego; po restarcie odtwarza czas z zapisanego znacznika zegara systemowego. Nie wymaga działającego procesu w tle. Pozostałe odliczania również są wyliczane z dat i godzin po ponownym otwarciu.
+Przy włączonym zapisie po zamknięciu aplikacji lub restarcie urządzenia **uruchomiony stoper uwzględnia upływ czasu zamknięcia**, a **pauza pozostaje na pauzie**. Podczas otwartej sesji stoper używa zegara monotonicznego; po restarcie odtwarza czas z zapisanego znacznika zegara systemowego. Nie wymaga działającego procesu w tle. Pozostałe odliczania również są wyliczane z dat i godzin po ponownym otwarciu.
 
 Dane są lokalne dla przeglądarki i adresu witryny: protokołu, hosta i portu. Nie są wysyłane na serwer ani synchronizowane między urządzeniami. Inna domena, port, profil lub tryb prywatny mogą oznaczać oddzielny zapis; wyczyszczenie danych witryny usuwa ustawienia i historię.
 
@@ -310,7 +324,7 @@ PWA pozwala uruchamiać aplikację z ikony i używać jej bez sieci po pobraniu 
 
 - `public/manifest.webmanifest`: nazwa SMART WATCH, tryb `standalone`, kolory, adres startowy i ikony.
 - Ikony PNG 192 i 512 px oraz osobna ikona `maskable` 512 px.
-- `provideServiceWorker` w `src/main.ts`: rejestracja Angular Service Worker od razu w wersji produkcyjnej; wyłączenie w trybie deweloperskim.
+- `provideServiceWorker` w `src/main.ts`: rejestracja Angular Service Worker w wersji produkcyjnej dopiero po zgodzie na zapis; wyłączenie w trybie deweloperskim.
 - `ngsw-config.json`: pobranie z wyprzedzeniem HTML, JavaScript, CSS, manifestu i ikon, potrzebnych do uruchomienia offline.
 - Obsługa propozycji instalacji i informacji o pobranej aktualizacji w interfejsie.
 
@@ -319,15 +333,16 @@ Konfiguracja opiera się na [Angular Service Worker](https://angular.dev/ecosyst
 ### Instalacja
 
 1. Uruchom wersję produkcyjną przez Docker Compose albo `npm run build` i `npm run preview`.
-2. Otwórz ją przez HTTPS lub na lokalnym `localhost`. Poczekaj na pierwsze pobranie zasobów.
+2. Otwórz ją przez HTTPS lub na lokalnym `localhost`, wybierz `Allow saving` i poczekaj na pobranie zasobów offline.
 3. W przeglądarce obsługującej propozycję instalacji wybierz **Install app** w aplikacji albo opcję instalacji z menu przeglądarki.
-4. Na iPhonie otwórz adres w Safari, wybierz **Udostępnij → Do ekranu początkowego** i, jeśli dostępne, uruchamianie jako aplikacja WWW. Szczegóły zależą od wersji systemu; opisuje je [instrukcja Apple](https://support.apple.com/guide/iphone/iphea86e5236/ios).
+4. Na Androidzie otwórz stronę w Chrome, wybierz **⋮ → Dodaj do ekranu głównego → Zainstaluj** (nazwy i dostępność zależą od przeglądarki), a następnie potwierdź. Opisuje to [pomoc Chrome](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=en).
+5. Na iPhonie otwórz adres w Safari, wybierz **Udostępnij → Do ekranu początkowego** i, jeśli dostępne, uruchamianie jako aplikacja WWW. Szczegóły zależą od wersji systemu; opisuje je [instrukcja Apple](https://support.apple.com/guide/iphone/iphea86e5236/ios).
 
 Brak przycisku instalacji nie oznacza błędu zegarka — jego dostępność zależy od przeglądarki i obsługi zdarzenia instalacji. Na telefonie `localhost` nie wskazuje komputera z Dockerem; dla dostępu z innego urządzenia należy zapewnić HTTPS.
 
 ### Sprawdzenie offline
 
-1. Otwórz produkcyjną aplikację z połączeniem sieciowym i poczekaj, aż service worker będzie aktywny.
+1. Otwórz produkcyjną aplikację z połączeniem sieciowym, włącz zapis i poczekaj, aż service worker będzie aktywny.
 2. Odśwież stronę, aby była obsługiwana przez service worker.
 3. Wyłącz sieć lub ustaw tryb Offline w narzędziach przeglądarki.
 4. Odśwież aplikację albo otwórz ją z ikony. Zakładki, obliczenia czasu i zapis lokalny nadal działają.
@@ -374,7 +389,7 @@ Skrypt `scripts/screenshots.ts` zapisuje obrazy w `docs/screenshots/`. Można ws
 SCREENSHOT_BASE_URL=http://localhost:8090 npm run screenshots
 ```
 
-Zestaw obejmuje wszystkie pięć zakładek, oba widoki „Odliczania do”, ustawienia zegarów świata oraz dwie karty mobilnej karuzeli. Aby dokumentować zmieniony kod, najpierw przebuduj aplikację, z której powstają zrzuty.
+Zestaw obejmuje popup zgody, wszystkie pięć zakładek, oba widoki „Odliczania do”, ustawienia zegarów świata oraz dwie karty mobilnej karuzeli. Aby dokumentować zmieniony kod, najpierw przebuduj aplikację, z której powstają zrzuty.
 
 ## Struktura projektu
 
@@ -386,7 +401,7 @@ Zestaw obejmuje wszystkie pięć zakładek, oba widoki „Odliczania do”, usta
 | `src/app/world-clocks.ts` | Katalog miast, zestaw domyślny i obliczenia czasu w strefach. |
 | `src/app/models.ts` | Model stanu i wartości domyślne. |
 | `src/app/time.ts` | Obliczenia i formatowanie czasu. |
-| `src/app/state.service.ts`, `src/app/persistence.ts` | Zapis lokalny, odczyt, walidacja i uzupełnianie starszych danych. |
+| `src/app/state.service.ts`, `src/app/persistence.ts`, `src/app/storage-consent.ts` | Zgoda, włączanie i wyłączanie zapisu, usuwanie danych/cache, walidacja i migracja. |
 | `src/app/i18n.service.ts`, `src/app/translations.ts` | PL/EN, wykrywanie języka i słownik. |
 | `src/styles.css` | Wygląd, responsywność i karuzela. |
 | `public/`, `ngsw-config.json`, `src/main.ts` | Manifest, ikony i konfiguracja PWA. |

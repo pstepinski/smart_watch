@@ -2,11 +2,45 @@
 <main class="stage" [attr.aria-label]="t('Hybrydowy zegar analogowo-cyfrowy')">
   <h1>SMART WATCH</h1>
   <div class="signature">by Piotr Stępiński</div>
-  <div class="language-picker"><label>{{ t('Język interfejsu') }}
+  <div class="language-picker"><label><span class="sr-only">{{ t('Język interfejsu') }}</span>
     <select id="languageSelect" [ngModel]="i18n.language()" (ngModelChange)="i18n.setLanguage($event)" [attr.aria-label]="t('Język interfejsu')">
-      <option value="pl">PL</option><option value="en">EN</option>
+      <option value="pl">🇵🇱 PL</option><option value="en">🇬🇧 EN</option>
     </select>
   </label></div>
+  <dialog #storageDialog class="storage-banner storage-popup" aria-labelledby="storageDialogTitle" (cancel)="closeStorageInfo($event)">
+      <div class="storage-popup-header">
+        <h2 id="storageDialogTitle">{{ t('Zapis danych na urządzeniu') }}</h2>
+        <label class="popup-language"><span class="sr-only">{{ t('Język interfejsu') }}</span><select id="dialogLanguageSelect" [ngModel]="i18n.language()" (ngModelChange)="i18n.setLanguage($event)" [attr.aria-label]="t('Język komunikatu')"><option value="pl">🇵🇱 PL</option><option value="en">🇬🇧 EN</option></select></label>
+        <button type="button" class="popup-close" (click)="closeStorageInfo()" [disabled]="storage.busy()" [attr.aria-label]="t('Zamknij')" autofocus>×</button>
+      </div>
+      <p>{{ t('Zapiszemy na tym urządzeniu ustawienia i dane, które wybierzesz lub wpiszesz na stronie: np. nazwy i terminy odliczań, wyniki stopera, wybrane miasta i język. Dzięki temu wrócisz do nich przy następnej wizycie. Dane te nie są wysyłane na serwer.') }}</p>
+      <p><strong>{{ t('Bez zgody możesz korzystać ze strony, ale po odświeżeniu lub zamknięciu strony Twoje ustawienia i wprowadzone dane znikną.') }}</strong></p>
+      <p>{{ t('Za Twoją zgodą przeglądarka zapisze również kopię tej aplikacji na urządzeniu. Dzięki temu po pierwszym otwarciu z internetem możesz później otworzyć zegarek, korzystać z odliczania i stopera oraz przeglądać zegary świata także bez połączenia z siecią. Nie musisz pobierać ani otwierać żadnych plików samodzielnie — przeglądarka robi to automatycznie.') }}</p>
+      <p>{{ t('Zapis możesz w każdej chwili wyłączyć przełącznikiem na stronie. Wyłączenie wymaga potwierdzenia i usuwa zapisane dane aplikacji.') }}</p>
+      <details class="install-instructions">
+        <summary>{{ t('Jak zapisać aplikację na telefonie?') }}</summary>
+        <h3>Android · Chrome</h3>
+        <ol>
+          <li>{{ t('Otwórz stronę w Chrome na telefonie.') }}</li>
+          <li>{{ t('Dotknij menu ⋮ i wybierz „Dodaj do ekranu głównego”, a następnie „Zainstaluj”, jeśli ta opcja jest dostępna.') }}</li>
+          <li>{{ t('Potwierdź dodanie. Ikona SMART WATCH pojawi się na ekranie głównym.') }}</li>
+        </ol>
+        <h3>iPhone / iPad · Safari</h3>
+        <ol>
+          <li>{{ t('Otwórz stronę w Safari na iPhonie lub iPadzie.') }}</li>
+          <li>{{ t('Dotknij Udostępnij (kwadrat ze strzałką w górę), a następnie „Do ekranu początkowego”. Jeśli nie widzisz tej opcji, przewiń listę czynności.') }}</li>
+          <li>{{ t('Jeśli jest dostępne „Otwórz jako aplikację internetową”, włącz tę opcję, a następnie wybierz „Dodaj”.') }}</li>
+        </ol>
+        <p>{{ t('Po dodaniu otwieraj aplikację z jej ikony. Dla działania bez internetu włącz zapis danych i otwórz aplikację przynajmniej raz z internetem. Instalacja PWA wymaga adresu HTTPS; połączenie z adresem IP komputera przez zwykłe HTTP nie wystarczy.') }}</p>
+      </details>
+      @if (storage.error()) { <p class="storage-dialog-error" role="alert">{{ t(storage.error()) }}</p> }
+      <div class="storage-banner-actions">
+      @if (!storage.enabled()) {
+        <button type="button" (click)="allowStorage()" [disabled]="storage.busy()">{{ t('Zgadzam się na zapis') }}</button>
+        <button type="button" (click)="closeStorageInfo()" [disabled]="storage.busy()">{{ t('Kontynuuj bez zapisu') }}</button>
+      } @else { <button type="button" (click)="closeStorageInfo()">{{ t('Zamknij') }}</button> }
+      </div>
+  </dialog>
   <div class="tabs" role="tablist" [attr.aria-label]="t('Tryb zegara')">
     @for (tab of tabs; track tab.id; let i = $index) {
       <button type="button" [id]="tab.id + 'Tab'" role="tab" [attr.aria-selected]="state.mode === tab.id" [attr.aria-controls]="tab.id + 'Panel'"
@@ -23,7 +57,7 @@
         <circle cx="50" cy="50" [attr.r]="ring.radius" pathLength="100" [style.stroke]="ring.color" [style.stroke-width]="ring.width" [style.stroke-dasharray]="ring.progress + ' 100'" />
       }
     </svg>
-    <div class="digital" id="digitalDisplay" [class.stopwatch-display]="vm.compact" [hidden]="!state.showDigital">
+    <div class="digital" id="digitalDisplay" [class.stopwatch-display]="vm.compact" [class.digital-above]="vm.digitalAbove" [hidden]="!state.showDigital">
       <div class="digital-label" id="digitalDate" [title]="vm.digitalLabel">{{ vm.digitalLabel }}</div>
       <div class="digital-time" id="digitalTime" [style.--readout-length]="vm.digitalTime.length < 8 ? 8 : vm.digitalTime.length">{{ vm.digitalTime }}</div>
     </div>
@@ -72,7 +106,13 @@
     </nav>
   }
   <div class="range-form" [hidden]="state.mode === 'world'"><label class="display-toggle" style="margin: 0"><input type="checkbox" role="switch" aria-controls="digitalDisplay" [(ngModel)]="state.showDigital" (ngModelChange)="changed()">{{ t('Pokaż wyświetlacz cyfrowy') }}</label></div>
-  <p class="storage-status" [class.error]="storage.error()" role="status">{{ t(storage.error() || 'Dane są zapisywane na tym urządzeniu.') }}</p>
+  <div class="range-form storage-setting">
+    <label class="display-toggle"><input type="checkbox" [checked]="storage.enabled()" [disabled]="storage.busy()" (change)="toggleStorage($event)">{{ t('Zapisuj dane na tym urządzeniu') }}</label>
+    <p class="range-help">{{ t('Włącz, aby zachować swoje ustawienia i wprowadzone dane po odświeżeniu strony. Wyłączenie usunie zapis po potwierdzeniu.') }}</p>
+    <button type="button" class="storage-info-button" (click)="openStorageInfo()">{{ t('Informacje o zapisie i instalacji') }}</button>
+  </div>
+  @if (storageNotice()) { <p class="storage-status" role="status">{{ t(storageNotice()) }}</p> }
+  <p class="storage-status" [class.error]="storage.error()" role="status">{{ t(storage.error() || (storage.enabled() ? 'Dane są zapisywane na tym urządzeniu.' : 'Zapis jest wyłączony. Po odświeżeniu strony Twoje ustawienia i wprowadzone dane znikną.')) }}</p>
   @if (installPrompt() || updateReady()) {
     <div class="install-bar">
       @if (installPrompt()) { <button type="button" (click)="install()">{{ t('Zainstaluj aplikację') }}</button> }

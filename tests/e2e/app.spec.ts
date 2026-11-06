@@ -1,6 +1,16 @@
 import { test, expect, chromium } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
+// These feature tests exercise the explicit opt-in state; first-visit behaviour is covered in privacy.spec.ts.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem('horizon.testConsentSeeded')) {
+      localStorage.setItem('horizon.storageConsent.v1', 'granted');
+      sessionStorage.setItem('horizon.testConsentSeeded', 'true');
+    }
+  });
+});
+
 async function saved(page: Page) {
   return page.evaluate(() => JSON.parse(localStorage.getItem('horizon.state.v1')!));
 }
@@ -115,6 +125,7 @@ test('dane i uruchomiony stoper przetrwają zamknięcie oraz uruchomienie przegl
   const profile = testInfo.outputPath('profile');
   let context = await chromium.launchPersistentContext(profile, { headless: true });
   let page = await context.newPage();
+  await page.addInitScript(() => localStorage.setItem('horizon.storageConsent.v1', 'granted'));
   await page.goto(testInfo.project.use.baseURL as string);
   await page.getByRole('tab', { name: 'Stoper', exact: true }).click();
   await page.getByRole('button', { name: 'Start', exact: true }).click();
@@ -429,4 +440,29 @@ test('odliczanie od ma podsumowanie wszystkich procesów z jednostkami i wyborem
   await page.getByRole('navigation', { name: 'Karty odliczania' }).getByRole('button', { name: 'Procesy', exact: true }).click();
   await expect.poll(() => page.locator('.countdown-overview').evaluate(el => Math.abs(el.scrollLeft - el.clientWidth))).toBeLessThan(1);
   expect((await page.locator('#overviewProcesses').boundingBox())!.x).toBeLessThan(10);
+});
+
+test.describe('wyświetlacz po przeciwnej stronie wskazówki godzinowej', () => {
+  test.use({ timezoneId: 'Europe/Warsaw' });
+  test('zmienia stronę na granicach 3 i 9 we wszystkich trybach głównej tarczy', async ({ page }) => {
+    await page.goto('/');
+    for (const tab of ['Zegarek', 'Odliczanie do', 'Odliczanie od', 'Stoper']) {
+      await page.getByRole('tab', { name: tab, exact: true }).click();
+      for (const [time, above] of [['02:59:59', false], ['03:00:00', true], ['08:59:59', true], ['09:00:00', false], ['15:00:00', true], ['21:00:00', false]] as const) {
+        await page.clock.setFixedTime(new Date(`2026-01-01T${time}+01:00`));
+        if (above) await expect(page.locator('#digitalDisplay')).toHaveClass(/digital-above/);
+        else await expect(page.locator('#digitalDisplay')).not.toHaveClass(/digital-above/);
+        const dial = (await page.locator('#overviewClock .dial').boundingBox())!;
+        const display = (await page.locator('#digitalDisplay').boundingBox())!;
+        if (above) expect(display.y + display.height).toBeLessThan(dial.y + dial.height / 2);
+        else expect(display.y).toBeGreaterThan(dial.y + dial.height / 2);
+      }
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(new Date('2026-01-01T06:00:00+01:00'));
+    await expect(page.locator('#digitalDisplay')).toHaveClass(/digital-above/);
+    const dial = (await page.locator('#overviewClock .dial').boundingBox())!;
+    const display = (await page.locator('#digitalDisplay').boundingBox())!;
+    expect(display.y + display.height).toBeLessThan(dial.y + dial.height / 2);
+  });
 });
