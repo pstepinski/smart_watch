@@ -98,7 +98,7 @@
       <div class="bezel">
         <div class="dial" id="dial" role="img" aria-label="Tarcza zegara z aktualną godziną">
           <div class="numeral n12">12</div><div class="numeral n3">3</div><div class="numeral n6">6</div><div class="numeral n9">9</div>
-          <svg class="countdown-ring" viewBox="0 0 100 100" aria-hidden="true"><g id="remainingRings"></g><g id="elapsedRings" style="display: none"></g></svg>
+          <svg class="countdown-ring" viewBox="0 0 100 100" aria-hidden="true"><g id="remainingRings"></g><g id="countdownUnitRings"></g><g id="elapsedRings" style="display: none"></g></svg>
           <div class="digital" id="digitalDisplay"><div id="digitalDate" class="digital-label">06.11.2026</div><div id="digitalTime" class="digital-time">--:--:--</div></div>
           <div class="hand hour" id="hourHand"></div><div class="hand minute" id="minuteHand"></div><div class="hand second" id="secondHand"></div><div class="pin"></div>
         </div>
@@ -108,6 +108,8 @@
     <div class="range-form"><label class="display-toggle" style="margin: 0"><input type="checkbox" id="showDigital" role="switch" aria-controls="digitalDisplay" checked> Pokaż wyświetlacz cyfrowy</label></div>
     <section id="countdownPanel" role="tabpanel" aria-labelledby="countdownTab">
     <form class="range-form" id="rangeForm">
+      <label>Widok odliczania<select id="countdownMode"><option value="all">Wszystkie procesy — jeden pasek na proces</option><option value="single">Wybrany proces — pasek na jednostkę czasu</option></select></label>
+      <div id="countdownUnitControls" hidden><label>Szybki wybór<select id="countdownPreset"></select></label><div class="unit-toggles" id="countdownUnitToggles"></div><p class="range-help">Wybierz proces przyciskiem „Na zegarku” w tabeli. Pierścienie pokazują pozostały czas w kolejnych cyklach jednostek i maleją do zera. Wyświetlacz pokazuje pozostały czas w zaznaczonych jednostkach.</p></div>
       <div class="table-scroll">
         <table class="range-table">
           <caption>Paski postępu</caption>
@@ -298,34 +300,7 @@
         const next = anniversary(start, (count + 1) * step);
         return count + (now - previous) / (next - previous);
       }
-      function updateStopwatch(now) {
-        stopwatches.forEach(entry => updateStopwatchEntry(now, entry));
-        if (!activeStopwatch) {
-          units.forEach(unit => { unit.ring.style.display = 'none'; });
-          if (stopwatchMode) {
-            digital.textContent = 'Dodaj stoper';
-            digitalDate.textContent = 'BRAK STOPERA';
-          }
-        }
-      }
-      function updateStopwatchEntry(now, entry) {
-        const units = entry.units;
-        const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-        const start = new Date(`${entry.startDate.value || today}T${entry.startTime.value}`);
-        const valid = Number.isFinite(+start);
-        const seconds = valid ? Math.max(0, (now - start) / 1000) : 0;
-        const values = [seconds, seconds / 60, seconds / 3600, seconds / 86400, seconds / 604800,
-          valid && now >= start ? calendarElapsed(start, now, 1) : 0,
-          valid && now >= start ? calendarElapsed(start, now, 12) : 0];
-        units.forEach((unit, index) => {
-          if (entry === activeStopwatch) {
-          unit.ring.style.display = valid && unit.toggle.checked ? '' : 'none';
-          unit.ring.style.strokeDasharray = `${values[index] % unit.cycle / unit.cycle * 100} 100`;
-          }
-          const value = valid ? String(Math.floor(values[index])) : '—';
-          if (unit.value.textContent !== value) unit.value.textContent = value;
-        });
-        if (stopwatchMode && entry === activeStopwatch) {
+      function formatSelectedTime(start, now, units, valid) {
           const parts = Array(units.length).fill(0);
           let cursor = valid ? new Date(start) : null;
           if (valid && now >= start) {
@@ -355,6 +330,37 @@
             .map(index => valid ? pad(parts[index]) : '—').join(':');
           const readout = [...largerUnits, ...(time ? [time] : [])].join(' ') || '—';
           digital.style.setProperty('--readout-length', Math.max(8, readout.length));
+          return readout;
+      }
+      function updateStopwatch(now) {
+        stopwatches.forEach(entry => updateStopwatchEntry(now, entry));
+        if (!activeStopwatch) {
+          units.forEach(unit => { unit.ring.style.display = 'none'; });
+          if (stopwatchMode) {
+            digital.textContent = 'Dodaj stoper';
+            digitalDate.textContent = 'BRAK STOPERA';
+          }
+        }
+      }
+      function updateStopwatchEntry(now, entry) {
+        const units = entry.units;
+        const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        const start = new Date(`${entry.startDate.value || today}T${entry.startTime.value}`);
+        const valid = Number.isFinite(+start);
+        const seconds = valid ? Math.max(0, (now - start) / 1000) : 0;
+        const values = [seconds, seconds / 60, seconds / 3600, seconds / 86400, seconds / 604800,
+          valid && now >= start ? calendarElapsed(start, now, 1) : 0,
+          valid && now >= start ? calendarElapsed(start, now, 12) : 0];
+        units.forEach((unit, index) => {
+          if (entry === activeStopwatch) {
+          unit.ring.style.display = valid && unit.toggle.checked ? '' : 'none';
+          unit.ring.style.strokeDasharray = `${values[index] % unit.cycle / unit.cycle * 100} 100`;
+          }
+          const value = valid ? String(Math.floor(values[index])) : '—';
+          if (unit.value.textContent !== value) unit.value.textContent = value;
+        });
+        if (stopwatchMode && entry === activeStopwatch) {
+          const readout = formatSelectedTime(start, now, units, valid);
           if (digital.textContent !== readout) digital.textContent = readout;
           digitalDate.textContent = entry.name.value.trim() || `Stoper ${entry.id}`;
           digitalDate.title = digitalDate.textContent;
@@ -363,6 +369,36 @@
           `Upłynęło: ${Math.floor(seconds / 86400)} dni ${pad(Math.floor(seconds / 3600) % 24)}:${pad(Math.floor(seconds / 60) % 60)}:${pad(Math.floor(seconds) % 60)}`;
         if (entry.status.textContent !== message) entry.status.textContent = message;
       }
+      const countdownMode = document.getElementById('countdownMode');
+      const countdownUnitRings = document.getElementById('countdownUnitRings');
+      const countdownControls = document.getElementById('countdownUnitControls');
+      const countdownPreset = document.getElementById('countdownPreset');
+      countdownPreset.innerHTML = `<option value="custom">Własny zestaw</option>${unitPresets.map(([key, name]) => `<option value="${key}">${name}</option>`).join('')}`;
+      const countdownUnits = units.map(unit => {
+        const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        for (const [key, value] of Object.entries({cx: 50, cy: 50, r: 28 - units.indexOf(unit) * 3.2, pathLength: 100})) ring.setAttribute(key, value);
+        ring.style.stroke = unit.color;
+        countdownUnitRings.appendChild(ring);
+        const label = document.createElement('label');
+        label.className = 'display-toggle';
+        label.innerHTML = `<input type="checkbox" role="switch" checked aria-label="Odliczanie: ${unit.name}"><span class="unit-dot" style="background: ${unit.color}"></span><span>${unit.name}</span>`;
+        document.getElementById('countdownUnitToggles').appendChild(label);
+        const toggle = label.querySelector('input');
+        toggle.addEventListener('change', () => {
+          const preset = unitPresets.find(([, , indexes]) => countdownUnits.every((item, index) => item.toggle.checked === indexes.includes(index)));
+          countdownPreset.value = preset ? preset[0] : 'custom';
+          refresh();
+        });
+        return {...unit, ring, toggle};
+      });
+      countdownPreset.value = 'all';
+      countdownPreset.addEventListener('change', () => {
+        const preset = unitPresets.find(([key]) => key === countdownPreset.value);
+        if (preset) countdownUnits.forEach((unit, index) => { unit.toggle.checked = preset[2].includes(index); });
+        refresh();
+      });
+      countdownMode.addEventListener('change', () => refresh());
+      let activeRange = null;
       const ranges = [];
       let nextId = 1;
       form.addEventListener('submit', event => event.preventDefault());
@@ -370,8 +406,9 @@
       form.addEventListener('change', () => refresh());
       document.getElementById('addRange').addEventListener('click', addRange);
       function layoutRings() {
-        const spacing = Math.min(3.5, 20 / Math.max(1, ranges.length - 1));
-        ranges.forEach((range, index) => {
+        const visibleRanges = ranges.filter(range => range.visible.checked);
+        const spacing = Math.min(3.5, 20 / Math.max(1, visibleRanges.length - 1));
+        visibleRanges.forEach((range, index) => {
           range.ring.setAttribute('r', 28 - index * spacing);
           range.ring.style.strokeWidth = Math.min(2, spacing * .65);
         });
@@ -380,7 +417,7 @@
         const id = nextId++;
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td><label>Nazwa<input type="text" data-field="name" value="Pasek ${id}" maxlength="80" aria-label="Nazwa paska ${id}"></label><label for="color-${id}">Kolor</label><select id="color-${id}" aria-label="Kolor paska ${id}">
+          <td><label class="display-toggle" data-control="visibility"><input type="checkbox" role="switch" data-field="visible" checked> Pokaż proces</label><label class="display-toggle" data-control="selection"><input type="radio" name="activeRange" data-field="activeRange"> Na zegarku</label><label>Nazwa<input type="text" data-field="name" value="Pasek ${id}" maxlength="80" aria-label="Nazwa paska ${id}"></label><label for="color-${id}">Kolor</label><select id="color-${id}" aria-label="Kolor paska ${id}">
             ${palette.map(([name, color]) => `<option value="${color}">${name}</option>`).join('')}
           </select></td>
           <td><label>Data (opcjonalnie)<input type="date" data-field="startDate" aria-label="Data początku paska ${id}"></label><label>Godzina<input type="time" data-field="startTime" value="08:00" required aria-label="Godzina początku paska ${id}"></label></td>
@@ -389,12 +426,25 @@
           <td><button type="button" aria-label="Usuń pasek ${id}">Usuń</button></td>`;
         const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         for (const [key, value] of Object.entries({cx: 50, cy: 50, pathLength: 100})) ring.setAttribute(key, value);
-        const range = {row, ring, status: row.querySelector('.range-status'), color: row.querySelector('select')};
+        const range = {id, row, ring, status: row.querySelector('.range-status'), color: row.querySelector('select')};
         for (const field of ['startDate', 'endDate', 'startTime', 'endTime']) range[field] = row.querySelector(`[data-field="${field}"]`);
         const name = row.querySelector('[data-field="name"]');
+        range.name = name;
+        range.visible = row.querySelector('[data-field="visible"]');
+        range.visible.checked = true;
+        range.visible.addEventListener('change', () => refresh());
+        range.visibilityControl = row.querySelector('[data-control="visibility"]');
+        range.selectionControl = row.querySelector('[data-control="selection"]');
+        range.radio = row.querySelector('[data-field="activeRange"]');
+        range.radio.addEventListener('change', () => {
+          if (range.radio.checked) activeRange = range;
+          refresh();
+        });
         const removeButton = row.querySelector('button');
         const updateName = () => {
           const label = name.value.trim() || `Pasek ${id}`;
+          range.visible.setAttribute('aria-label', `Pokaż proces: ${label}`);
+          range.radio.setAttribute('aria-label', `Pokaż na zegarku: ${label}`);
           range.color.setAttribute('aria-label', `Kolor: ${label}`);
           removeButton.setAttribute('aria-label', `Usuń: ${label}`);
           range.status.setAttribute('aria-label', `Postęp: ${label}`);
@@ -407,21 +457,31 @@
         range.color.value = palette[(id - 1) % palette.length][1];
         row.querySelector('button').addEventListener('click', () => {
           ranges.splice(ranges.indexOf(range), 1);
+          if (activeRange === range) activeRange = ranges[0] || null;
           row.remove();
           ring.remove();
           layoutRings();
           refresh();
         });
         ranges.push(range);
+        if (!activeRange) activeRange = range;
         rows.appendChild(row);
         rings.appendChild(ring);
         layoutRings();
         refresh();
       }
       function updateCountdown(now) {
-        ranges.forEach(range => updateRange(now, range));
+        layoutRings();
+        ranges.forEach(range => {
+          range.visibilityControl.hidden = countdownMode.value === 'single';
+          range.selectionControl.hidden = countdownMode.value !== 'single';
+          range.ring.style.display = range.visible.checked ? '' : 'none';
+          range.radio.checked = activeRange === range;
+          updateRange(now, range);
+        });
       }
-      function updateRange(now, {row, ring, status, color, startDate, endDate, startTime, endTime}) {
+      function updateRange(now, range) {
+        const {row, ring, status, color, startDate, endDate, startTime, endTime} = range;
         ring.style.stroke = color.value;
         row.style.setProperty('--row-color', color.value);
         let error = '';
@@ -432,6 +492,7 @@
         const end = new Date(`${endDate.value || today}T${endTime.value}`);
         if (!startDate.value && end < start) end.setDate(end.getDate() + 1);
         if (!error && (!Number.isFinite(+start) || !Number.isFinite(+end) || end <= start)) error = 'Koniec musi przypadać po początku.';
+        range.timing = {start, end, error};
         status.classList.toggle('error', Boolean(error));
         if (error) {
           ring.style.visibility = 'hidden';
@@ -446,6 +507,31 @@
         const remaining = `${days ? days + ' dni ' : ''}${pad(Math.floor(seconds / 3600) % 24)}:${pad(Math.floor(seconds / 60) % 60)}:${pad(seconds % 60)}`;
         const message = now < start ? `Oczekiwanie na początek · do końca ${remaining}` : progress >= 1 ? 'Zakończono · 100%' : `Pozostało ${remaining} · ${Math.floor(progress * 100)}%`;
         if (status.textContent !== message) status.textContent = message;
+      }
+      function renderCountdownDetails(now) {
+        const single = countdownMode.value === 'single';
+        countdownControls.hidden = !single;
+        rings.style.display = stopwatchMode || single ? 'none' : '';
+        countdownUnitRings.style.display = !stopwatchMode && single ? '' : 'none';
+        digitalDisplay.classList.toggle('stopwatch-display', stopwatchMode || single);
+        if (stopwatchMode || !single) return;
+        const timing = activeRange?.timing;
+        const valid = timing && !timing.error;
+        // Before the beginning, show the full process duration.
+        const from = valid ? new Date(Math.min(+timing.end, Math.max(+now, +timing.start))) : now;
+        const end = valid ? timing.end : now;
+        const seconds = Math.max(0, (end - from) / 1000);
+        const values = [seconds, seconds / 60, seconds / 3600, seconds / 86400, seconds / 604800,
+          valid ? calendarElapsed(from, end, 1) : 0, valid ? calendarElapsed(from, end, 12) : 0];
+        countdownUnits.forEach((unit, index) => {
+          const value = values[index];
+          const fraction = value > 0 ? (value % unit.cycle || unit.cycle) / unit.cycle : 0;
+          unit.ring.style.display = valid && unit.toggle.checked && value > 0 ? '' : 'none';
+          unit.ring.style.strokeDasharray = `${fraction * 100} 100`;
+        });
+        digitalDate.textContent = activeRange ? activeRange.name.value.trim() || `Pasek ${activeRange.id}` : 'BRAK PROCESU';
+        digitalDate.title = digitalDate.textContent;
+        digital.textContent = !activeRange ? 'Dodaj proces' : !valid ? 'Błędny zakres' : formatSelectedTime(from, end, countdownUnits, true);
       }
       const pad = n => String(n).padStart(2, '0');
       function refresh() {
@@ -463,6 +549,7 @@
         digital.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
         digitalDate.textContent = `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`;
         }
+        renderCountdownDetails(now);
         date.textContent = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long', weekday: 'long' }).format(now);
         dial.setAttribute('aria-label', `Zegar wskazuje ${pad(now.getHours())}:${pad(now.getMinutes())}`);
       }
