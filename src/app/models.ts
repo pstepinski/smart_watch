@@ -45,6 +45,7 @@ export interface AppState {
   language: 'pl' | 'en';
   mode: Mode;
   showDigital: boolean;
+  alarmInfoAcknowledged?: boolean;
   countdownMode: 'all' | 'single';
   countdownUnits: UnitSelection;
   processes: Process[];

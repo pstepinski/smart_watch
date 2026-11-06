@@ -194,8 +194,7 @@ app-root, .stage, .range-form { min-width: 0; }
   .storage-popup-header { gap: 8px; }
   .storage-popup-header h2 { font-size: 16px; }
 }
-.alarm-help { padding: 14px; margin-bottom: 18px; border: 1px solid #927344; border-radius: 10px; color: #f4dfb2; font-size: 13px; line-height: 1.6; }
-.alarm-help p { margin: 8px 0; }
-.alarm-help .range-status { margin-top: 10px; }
+.alarm-audio-controls { margin-bottom: 18px; }
+.page-information { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 28px; }
 .alarm-audio-status { display: block; margin-top: 8px; color: #9bb0ba; font-size: 12px; }
 .alarm-notices { border-color: #f4df77; }

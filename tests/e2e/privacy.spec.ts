@@ -8,6 +8,13 @@ const checkbox = (page: Page) => page.getByRole('checkbox', { name: 'Zapisuj dan
 const banner = (page: Page) => page.getByRole('dialog', { name: 'Zapis danych na urządzeniu', exact: true });
 const read = (page: Page) => page.evaluate(({ stateKey, consentKey }) => ({ state: localStorage.getItem(stateKey), consent: localStorage.getItem(consentKey) }), { stateKey, consentKey });
 
+// Feature tests acknowledge the alarm introduction; its lifecycle is tested separately.
+test.beforeEach(async ({ page }) => {
+  await page.addLocatorHandler(page.getByRole('dialog', { name: 'Informacje o alarmie', exact: true }), async () => {
+    await page.getByRole('button', { name: 'Rozumiem', exact: true }).click();
+  });
+});
+
 test('bez zgody nie zapisuje stanu, języka ani nie rejestruje PWA, odmowa działa w sesji', async ({ page }) => {
   await page.goto('/');
   await expect(banner(page)).toBeVisible();
@@ -150,7 +157,7 @@ test('nieudany zapis danych cofa flagę zgody i zachowuje poprzedni zapis', asyn
 test('popup można odczytać ponownie bez zmiany zgody, zawiera instrukcje Android i iOS', async ({ page }) => {
   await page.goto('/');
   await expect(banner(page)).toBeVisible();
-  await expect(page.locator('dialog')).toHaveJSProperty('open', true);
+  await expect(banner(page)).toHaveJSProperty('open', true);
   await banner(page).getByText('Jak zapisać aplikację na telefonie?', { exact: true }).click();
   await expect(banner(page).getByRole('heading', { name: 'Android · Chrome', exact: true })).toBeVisible();
   await expect(banner(page).getByRole('heading', { name: 'iPhone / iPad · Safari', exact: true })).toBeVisible();

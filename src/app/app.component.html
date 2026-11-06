@@ -41,6 +41,12 @@
       } @else { <button type="button" (click)="closeStorageInfo()">{{ t('Zamknij') }}</button> }
       </div>
   </dialog>
+  <dialog #alarmInfoDialog class="storage-banner storage-popup" aria-labelledby="alarmInfoTitle" (cancel)="$event.preventDefault()">
+    <div class="storage-popup-header"><h2 id="alarmInfoTitle">{{ t('Informacje o alarmie') }}</h2></div>
+        <strong>{{ t('Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie.') }}</strong>
+        <p>{{ t('Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle. Sprawdź głośność i tryb wyciszenia telefonu. Po odświeżeniu strony ponownie włącz dźwięk przyciskiem „Włącz i przetestuj dźwięk alarmów” w zakładce „Odliczanie do”. Alarm jest jednorazowy; po zmianie terminu włącz go ponownie.') }}</p>
+    <div class="storage-banner-actions"><button type="button" (click)="acknowledgeAlarmInfo()" autofocus>{{ t('Rozumiem') }}</button></div>
+  </dialog>
   @if (alarms.notices().length) {
     <aside class="alarm-notices range-form" role="alert">
       @for (notice of alarms.notices(); track notice.id) {
@@ -117,7 +123,6 @@
   <div class="range-form storage-setting">
     <label class="display-toggle"><input type="checkbox" [checked]="storage.enabled()" [disabled]="storage.busy()" (change)="toggleStorage($event)">{{ t('Zapisuj dane na tym urządzeniu') }}</label>
     <p class="range-help">{{ t('Włącz, aby zachować swoje ustawienia i wprowadzone dane po odświeżeniu strony. Wyłączenie usunie zapis po potwierdzeniu.') }}</p>
-    <button type="button" class="storage-info-button" (click)="openStorageInfo()">{{ t('Informacje o zapisie i instalacji') }}</button>
   </div>
   @if (storageNotice()) { <p class="storage-status" role="status">{{ t(storageNotice()) }}</p> }
   <p class="storage-status" [class.error]="storage.error()" role="status">{{ t(storage.error() || (storage.enabled() ? 'Dane są zapisywane na tym urządzeniu.' : 'Zapis jest wyłączony. Po odświeżeniu strony Twoje ustawienia i wprowadzone dane znikną.')) }}</p>
@@ -130,9 +135,7 @@
   <section id="clockPanel" role="tabpanel" aria-labelledby="clockTab" [hidden]="state.mode !== 'clock'"><p class="range-help">{{ t('Aktualna data i godzina.') }}</p></section>
   <section id="countdownPanel" role="tabpanel" aria-labelledby="countdownTab" [hidden]="state.mode !== 'countdown'">
     <div class="range-form">
-      <div class="alarm-help">
-        <strong>{{ t('Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie.') }}</strong>
-        <p>{{ t('Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle. Sprawdź głośność i tryb wyciszenia telefonu. Po odświeżeniu strony ponownie włącz dźwięk przyciskiem poniżej. Alarm jest jednorazowy; po zmianie terminu włącz go ponownie.') }}</p>
+      <div class="alarm-audio-controls">
         <button type="button" (click)="alarms.testSound()" [disabled]="alarms.preparing()">{{ t('Włącz i przetestuj dźwięk alarmów') }}</button>
         <span class="alarm-audio-status">{{ t(alarms.ready() ? 'Dźwięk jest włączony w tej sesji.' : 'Dźwięk wymaga włączenia w tej sesji.') }}</span>
         @if (alarms.error()) { <p class="range-status error" role="alert">{{ t(alarms.error()) }}</p> }
@@ -213,4 +216,8 @@
   <section id="worldPanel" role="tabpanel" aria-labelledby="worldTab" [hidden]="state.mode !== 'world'">
     @if (state.mode === 'world') { <app-world-clocks /> }
   </section>
+  <footer class="page-information range-form">
+    <button type="button" (click)="openAlarmInfo()">{{ t('Informacje o alarmie') }}</button>
+    <button type="button" class="storage-info-button" (click)="openStorageInfo()">{{ t('Informacje o zapisie i instalacji') }}</button>
+  </footer>
 </main>

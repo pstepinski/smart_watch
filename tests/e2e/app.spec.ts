@@ -2,6 +2,13 @@ import { test, expect, chromium } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 // These feature tests exercise the explicit opt-in state; first-visit behaviour is covered in privacy.spec.ts.
+// Feature tests acknowledge the alarm introduction; its lifecycle is tested separately.
+test.beforeEach(async ({ page }) => {
+  await page.addLocatorHandler(page.getByRole('dialog', { name: 'Informacje o alarmie', exact: true }), async () => {
+    await page.getByRole('button', { name: 'Rozumiem', exact: true }).click();
+  });
+});
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     if (!sessionStorage.getItem('horizon.testConsentSeeded')) {
@@ -377,6 +384,8 @@ test.describe('karuzela odliczania na telefonie', () => {
   test('przesuwa zegarek gestem do tabeli i pozwala wrócić przyciskiem', async ({ page, context }) => {
     await page.goto('/');
     await page.getByRole('tab', { name: 'Odliczanie do', exact: true }).click();
+    await page.removeLocatorHandler(page.getByRole('dialog', { name: 'Informacje o alarmie', exact: true }));
+    await page.getByRole('button', { name: 'Rozumiem', exact: true }).click();
     const carousel = page.locator('.countdown-overview');
     const bounds = (await carousel.boundingBox())!;
     const y = Math.min(bounds.y + 150, 700);

@@ -3,8 +3,10 @@ export type Language = 'pl' | 'en';
 const english: Record<string, string> = {
   "Alarm": "Alarm",
   "Alarm: ": "Alarm: ",
+  "Informacje o alarmie": "Alarm information",
+  "Rozumiem": "I understand",
   "Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie.": "The alarm only works while the app is open and active, with the screen on.",
-  "Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle. Sprawdź głośność i tryb wyciszenia telefonu. Po odświeżeniu strony ponownie włącz dźwięk przyciskiem poniżej. Alarm jest jednorazowy; po zmianie terminu włącz go ponownie.": "It does not work when your phone is locked, the screen is off, the app is closed or running in the background. Check your phone's volume and silent mode. After refreshing, enable sound again using the button below. Alarms are one-time; re-enable after changing the end time.",
+  "Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle. Sprawdź głośność i tryb wyciszenia telefonu. Po odświeżeniu strony ponownie włącz dźwięk przyciskiem „Włącz i przetestuj dźwięk alarmów” w zakładce „Odliczanie do”. Alarm jest jednorazowy; po zmianie terminu włącz go ponownie.": "It does not work when your phone is locked, the screen is off, the app is closed or running in the background. Check your phone's volume and silent mode. After refreshing, enable sound again using “Enable and test alarm sound” in the “Countdown to” tab. Alarms are one-time; re-enable after changing the end time.",
   "Włącz i przetestuj dźwięk alarmów": "Enable and test alarm sound",
   "Dźwięk jest włączony w tej sesji.": "Sound is enabled for this session.",
   "Dźwięk wymaga włączenia w tej sesji.": "Sound must be enabled for this session.",

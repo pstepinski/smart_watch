@@ -162,7 +162,7 @@ Widoczność sekund, minut, godzin, dni, tygodni, miesięcy i lat ustala się pr
 
 Każdy proces ma opcję **Alarm**. Włączenie ustawia jednorazowy alarm na wyliczoną datę i godzinę końca, również gdy wpisano tylko godzinę celu. Cel musi być prawidłowy i przyszły. Ukrycie procesu na tarczy nie wyłącza jego alarmu.
 
-**Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie. Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle — także w zainstalowanej PWA.** Ta informacja jest widoczna obok ustawień alarmu w PL i EN. Nie jest to natywny budzik ani powiadomienie push.
+**Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie. Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle — także w zainstalowanej PWA.** Ta informacja pojawia się w popupie przy pierwszym otwarciu zakładki „Odliczanie do”, w PL i EN. Przycisk „Rozumiem” zamyka popup; przy włączonym zapisie danych wybór jest pamiętany również po odświeżeniu. Bez zapisu jest pamiętany tylko do odświeżenia lub zamknięcia strony. Przycisk „Informacje o alarmie” na dole strony pozwala ponownie przeczytać komunikat. Obok znajduje się przycisk informacji o zapisie danych i instalacji. Nie jest to natywny budzik ani powiadomienie push.
 
 - Włączenie alarmu aktywuje dźwięk w bieżącej sesji. Przycisk **Enable and test alarm sound** pozwala sprawdzić, czy dźwięk jest słyszalny; trzeba uwzględnić głośność i wyciszenie telefonu.
 - Po odświeżeniu lub ponownym otwarciu strony ponownie użyj przycisku aktywacji dźwięku. Przeglądarka wymaga interakcji użytkownika; zapamiętany termin sam nie odblokowuje audio.

@@ -18,6 +18,7 @@ export function isAppState(value: unknown): value is AppState {
   if (value['language'] !== 'pl' && value['language'] !== 'en') return false;
   if (!['clock', 'countdown', 'stopwatch', 'timer', 'world'].includes(String(value['mode'])) || typeof value['showDigital'] !== 'boolean') return false;
   if (!['all', 'single'].includes(String(value['countdownMode'])) || !selection(value['countdownUnits'])) return false;
+  if (value['alarmInfoAcknowledged'] !== undefined && typeof value['alarmInfoAcknowledged'] !== 'boolean') return false;
   const world = value['worldClocks'];
   if (!Array.isArray(world) || !world.every(item => record(item) && natural(item['id']) && strings(item, ['name', 'timeZone']) &&
     typeof item['visible'] === 'boolean' && validTimeZone(item['timeZone'] as string)) || !uniqueIds(world)) return false;

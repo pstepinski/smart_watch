@@ -40,6 +40,7 @@ export class AppComponent implements OnDestroy {
   readonly updateReady = signal(false);
   readonly storageNotice = signal('');
   readonly storageDialog = viewChild.required<ElementRef<HTMLDialogElement>>('storageDialog');
+  readonly alarmInfoDialog = viewChild.required<ElementRef<HTMLDialogElement>>('alarmInfoDialog');
   private readonly saveOnLeave = () => this.storage.save();
   private readonly visibilityChanged = () => { if (document.hidden) { this.alarms.stopSound(); this.storage.save(); } else this.now.set(Date.now()); };
   private readonly beforeInstall = (event: Event) => { event.preventDefault(); this.installPrompt.set(event as InstallEvent); };
@@ -124,6 +125,13 @@ export class AppComponent implements OnDestroy {
         if (!dialog.open) dialog.showModal();
       } else if (dialog.open) dialog.close();
     });
+    afterRenderEffect(() => {
+      this.revision();
+      if (this.state.mode === 'countdown' && !this.state.alarmInfoAcknowledged && !this.storage.showBanner()) {
+        const dialog = this.alarmInfoDialog().nativeElement;
+        if (!dialog.open && !this.storageDialog().nativeElement.open) dialog.showModal();
+      }
+    });
     window.addEventListener('pagehide', this.saveOnLeave);
     document.addEventListener('visibilitychange', this.visibilityChanged);
     window.addEventListener('beforeinstallprompt', this.beforeInstall);
@@ -141,6 +149,15 @@ export class AppComponent implements OnDestroy {
     this.storage.save();
     this.revision.update(value => value + 1);
     this.now.set(Date.now());
+  }
+  openAlarmInfo(): void {
+    const dialog = this.alarmInfoDialog().nativeElement;
+    if (!dialog.open) dialog.showModal();
+  }
+  acknowledgeAlarmInfo(): void {
+    this.state.alarmInfoAcknowledged = true;
+    this.alarmInfoDialog().nativeElement.close();
+    this.changed();
   }
   openStorageInfo(): void {
     const dialog = this.storageDialog().nativeElement;

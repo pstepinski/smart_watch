@@ -12,6 +12,7 @@ const directory = fileURLToPath(new URL('../docs/screenshots/', import.meta.url)
 await mkdir(directory, { recursive: true });
 const demoTime = new Date('2026-11-06T10:24:36+01:00');
 const demo = createState(demoTime, 'en');
+demo.alarmInfoAcknowledged = true;
 demo.processes = [
   { id: 1, name: 'Working day', color: '#5ae6c6', visible: true, startDate: '', startTime: '08:00', endDate: '', endTime: '16:00' },
   { id: 2, name: 'Design review', color: '#65baff', visible: true, startDate: '', startTime: '10:00', endDate: '', endTime: '12:30' },

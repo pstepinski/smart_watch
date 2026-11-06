@@ -13,6 +13,8 @@ test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-01-01T11:59:58+01:00'));
   await page.goto('/');
   await page.getByRole('tab', { name: 'Odliczanie do', exact: true }).click();
+  await expect(page.getByText('Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Rozumiem', exact: true }).click();
   await page.getByLabel('Godzina końca: Pasek 1', { exact: true }).fill('12:00');
 });
 const alarm = (page: Page) => page.getByRole('checkbox', { name: 'Alarm: Pasek 1', exact: true });
@@ -23,7 +25,7 @@ async function beforeDeadline(page: Page) {
 }
 
 test('alarm jednorazowy gra przy aktywnej aplikacji i pokazuje jasną informację o ograniczeniach', async ({ page }) => {
-  await expect(page.getByText('Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Informacje o alarmie', exact: true })).not.toBeVisible();
   await alarm(page).check();
   await expect(page.getByText('Dźwięk jest włączony w tej sesji.', { exact: true })).toBeVisible();
   await beforeDeadline(page);
@@ -47,7 +49,7 @@ test('zmiana terminu anuluje alarm i nie pozwala ustawić go dla minionego celu'
   await page.getByLabel('Godzina końca: Pasek 1', { exact: true }).fill('10:00');
   await alarm(page).click();
   await expect(alarm(page)).not.toBeChecked();
-  await expect(page.locator('.alarm-help')).toContainText('prawidłowy termin końca w przyszłości');
+  await expect(page.locator('.alarm-audio-controls')).toContainText('prawidłowy termin końca w przyszłości');
 });
 
 test('w tle nie odtwarza dźwięku i po powrocie informuje o miniętym terminie', async ({ page }) => {
