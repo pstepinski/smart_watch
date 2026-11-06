@@ -36,6 +36,15 @@
     .countdown-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; }
     .countdown-ring circle { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 100 100; filter: drop-shadow(0 0 1px #5ae6c680); }
     .range-form { margin: 24px auto 0; padding: 18px; border: 1px solid #304c58; border-radius: 16px; background: #0a1923cc; text-align: left; }
+    [hidden] { display: none !important; }
+    .tabs { display: flex; justify-content: center; gap: 8px; margin-top: 24px; }
+    .tabs button { padding: 10px 20px; border: 1px solid #395762; border-radius: 10px; color: var(--ice); background: #0a1923; font: inherit; cursor: pointer; }
+    .tabs button[aria-selected="true"] { background: #254b50; border-color: var(--accent); }
+    .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .unit-toggles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 16px; margin-top: 20px; }
+    .unit-toggles .display-toggle { margin-bottom: 8px; }
+    .unit-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .elapsed-total { color: var(--ice); font-size: 18px; font-variant-numeric: tabular-nums; }
     .table-scroll { overflow-x: auto; }
     .range-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .range-table caption { text-align: left; font-size: 17px; font-weight: 650; margin-bottom: 16px; color: var(--ice); }
@@ -64,6 +73,8 @@
     .digital { position: absolute; z-index: 3; left: 50%; top: 58%; transform: translateX(-50%); width: 43%; padding: 7px 6px 6px; border: 1px solid #386b71; border-radius: 8px; background: linear-gradient(180deg, #020b11 0%, #0c2329 100%); box-shadow: inset 0 1px 10px #000a, 0 1px 0 #7ff6db17, 0 0 22px #29bfaa17; }
     .digital-label { font-size: clamp(5px, 1.15vw, 7px); font-weight: 750; letter-spacing: .25em; color: #4f9d99; margin-bottom: 2px; }
     .digital-time { font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: clamp(13px, 3.6vw, 22px); font-weight: 700; letter-spacing: .025em; color: var(--ice); text-shadow: 0 0 12px #79f5d667; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .digital.stopwatch-display { top: 54%; width: 48%; }
+    .stopwatch-display .digital-time { font-size: clamp(7px, 2vw, 11px); line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere; }
     .footer { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 10px; letter-spacing: .18em; color: #8397a0; text-transform: uppercase; }
     .live-dot { display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: #6dedc9; box-shadow: 0 0 10px #6dedc9a6; vertical-align: 1px; }
     .footer-sep { width: 1px; height: 12px; background: #39505a; }
@@ -77,19 +88,24 @@
     <h1>HORIZON</h1>
     <div class="subtitle">Analog × Digital · Edition 01</div>
 
+    <div class="tabs" role="tablist" aria-label="Tryb zegara">
+      <button type="button" id="countdownTab" role="tab" aria-selected="true" aria-controls="countdownPanel">Odliczanie</button>
+      <button type="button" id="stopwatchTab" role="tab" aria-selected="false" aria-controls="stopwatchPanel" tabindex="-1">Stoper</button>
+    </div>
     <div class="watch-shell">
       <div class="bezel">
         <div class="dial" id="dial" role="img" aria-label="Tarcza zegara z aktualną godziną">
           <div class="numeral n12">12</div><div class="numeral n3">3</div><div class="numeral n6">6</div><div class="numeral n9">9</div>
-          <svg class="countdown-ring" viewBox="0 0 100 100" aria-hidden="true"><g id="remainingRings"></g></svg>
+          <svg class="countdown-ring" viewBox="0 0 100 100" aria-hidden="true"><g id="remainingRings"></g><g id="elapsedRings" style="display: none"></g></svg>
           <div class="digital" id="digitalDisplay"><div id="digitalDate" class="digital-label">06.11.2026</div><div id="digitalTime" class="digital-time">--:--:--</div></div>
           <div class="hand hour" id="hourHand"></div><div class="hand minute" id="minuteHand"></div><div class="hand second" id="secondHand"></div><div class="pin"></div>
         </div>
       </div>
     </div>
     <div class="footer"><span><span class="live-dot"></span>LIVE CLOCK</span><span class="footer-sep"></span><span id="dateLabel">--</span></div>
+    <div class="range-form"><label class="display-toggle" style="margin: 0"><input type="checkbox" id="showDigital" role="switch" aria-controls="digitalDisplay" checked> Pokaż wyświetlacz cyfrowy</label></div>
+    <section id="countdownPanel" role="tabpanel" aria-labelledby="countdownTab">
     <form class="range-form" id="rangeForm">
-      <label class="display-toggle"><input type="checkbox" id="showDigital" role="switch" aria-controls="digitalDisplay" checked> Pokaż wyświetlacz cyfrowy</label>
       <div class="table-scroll">
         <table class="range-table">
           <caption>Paski postępu</caption>
@@ -100,6 +116,17 @@
       <button type="button" id="addRange">+ Dodaj pasek</button>
       <p class="range-help">Zmiany są stosowane automatycznie. Wiersze odpowiadają pierścieniom od zewnątrz do środka. Bez dat odliczanie dotyczy dzisiejszych godzin; wcześniejsza godzina końca oznacza następny dzień. Dla zakresu z datami podaj obie daty.</p>
     </form>
+    </section>
+    <section id="stopwatchPanel" role="tabpanel" aria-labelledby="stopwatchTab" hidden>
+      <form class="range-form" id="stopwatchForm">
+        <label for="stopwatchStart">Odliczaj od wybranego momentu (czas lokalny)</label>
+        <input type="datetime-local" id="stopwatchStart" step="1" required>
+        <button type="button" id="startNow">Od teraz</button>
+        <p id="elapsedTotal" class="elapsed-total" role="status"></p>
+        <div class="unit-toggles" id="unitToggles"></div>
+        <p class="range-help">Pierścienie rosną wraz z upływem czasu i rozpoczynają kolejny obrót po pełnym cyklu: sekundy / 60, minuty / 60, godziny / 24, dni / 7, tygodnie / 52, miesiące / 12, lata / 10. Miesiące i lata liczone są kalendarzowo od wybranego momentu. Przy jednostkach widoczny jest łączny upływ czasu.</p>
+      </form>
+    </section>
   </main>
   <script>
     (() => {
@@ -128,6 +155,132 @@
         ['Miętowy', '#5ae6c6'], ['Niebieski', '#65baff'], ['Fioletowy', '#b99aff'],
         ['Różowy', '#ff8fbc'], ['Pomarańczowy', '#ffb366'], ['Żółty', '#f4df77']
       ];
+      let stopwatchMode = false;
+      const elapsedRings = document.getElementById('elapsedRings');
+      const stopwatchStart = document.getElementById('stopwatchStart');
+      const elapsedTotal = document.getElementById('elapsedTotal');
+      const units = [
+        ['Sekundy', 60, '#5ae6c6'], ['Minuty', 60, '#65baff'], ['Godziny', 24, '#b99aff'],
+        ['Dni', 7, '#ff8fbc'], ['Tygodnie', 52, '#ffb366'], ['Miesiące', 12, '#f4df77'], ['Lata', 10, '#f1f9ff']
+      ].map(([name, cycle, color], index) => {
+        const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        for (const [key, value] of Object.entries({cx: 50, cy: 50, r: 28 - index * 3.2, pathLength: 100})) ring.setAttribute(key, value);
+        ring.style.stroke = color;
+        elapsedRings.appendChild(ring);
+        const label = document.createElement('label');
+        label.className = 'display-toggle';
+        label.innerHTML = `<input type="checkbox" role="switch" checked aria-label="Pokaż pierścień: ${name}"><span class="unit-dot" style="background: ${color}"></span><span>${name}</span><span class="unit-value"></span>`;
+        document.getElementById('unitToggles').appendChild(label);
+        const toggle = label.querySelector('input');
+        toggle.addEventListener('change', () => refresh());
+        return {name, ring, toggle, value: label.querySelector('.unit-value'), cycle};
+      });
+      function selectTab(stopwatch) {
+        stopwatchMode = stopwatch;
+        digitalDisplay.classList.toggle('stopwatch-display', stopwatch);
+        document.getElementById('countdownPanel').hidden = stopwatch;
+        document.getElementById('stopwatchPanel').hidden = !stopwatch;
+        rings.style.display = stopwatch ? 'none' : '';
+        elapsedRings.style.display = stopwatch ? '' : 'none';
+        ['countdownTab', 'stopwatchTab'].forEach((id, index) => {
+          const tab = document.getElementById(id);
+          const selected = Boolean(index) === stopwatch;
+          tab.setAttribute('aria-selected', String(selected));
+          tab.tabIndex = selected ? 0 : -1;
+        });
+        refresh();
+      }
+      ['countdownTab', 'stopwatchTab'].forEach((id, index) => {
+        const tab = document.getElementById(id);
+        tab.addEventListener('click', () => selectTab(Boolean(index)));
+        tab.addEventListener('keydown', event => {
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          const next = event.key === 'Home' ? false : event.key === 'End' ? true : !Boolean(index);
+          selectTab(next);
+          document.getElementById(next ? 'stopwatchTab' : 'countdownTab').focus();
+        });
+      });
+      function setStartNow() {
+        const now = new Date();
+        stopwatchStart.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        refresh();
+      }
+      document.getElementById('startNow').addEventListener('click', setStartNow);
+      document.getElementById('stopwatchForm').addEventListener('submit', event => event.preventDefault());
+      stopwatchStart.addEventListener('input', () => refresh());
+      // Clamp anniversaries to the last day of shorter months (e.g. 31 January → 28 February).
+      function anniversary(start, months) {
+        const result = new Date(start);
+        result.setDate(1);
+        result.setMonth(start.getMonth() + months);
+        const last = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+        result.setDate(Math.min(start.getDate(), last));
+        return result;
+      }
+      function calendarElapsed(start, now, step) {
+        let count = Math.floor(((now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth()) / step);
+        if (anniversary(start, count * step) > now) count--;
+        const previous = anniversary(start, count * step);
+        const next = anniversary(start, (count + 1) * step);
+        return count + (now - previous) / (next - previous);
+      }
+      function updateStopwatch(now) {
+        const start = new Date(stopwatchStart.value);
+        const valid = Number.isFinite(+start);
+        const seconds = valid ? Math.max(0, (now - start) / 1000) : 0;
+        const values = [seconds, seconds / 60, seconds / 3600, seconds / 86400, seconds / 604800,
+          valid && now >= start ? calendarElapsed(start, now, 1) : 0,
+          valid && now >= start ? calendarElapsed(start, now, 12) : 0];
+        units.forEach((unit, index) => {
+          unit.ring.style.display = valid && unit.toggle.checked ? '' : 'none';
+          unit.ring.style.strokeDasharray = `${values[index] % unit.cycle / unit.cycle * 100} 100`;
+          const value = valid ? String(Math.floor(values[index])) : '—';
+          if (unit.value.textContent !== value) unit.value.textContent = value;
+        });
+        if (stopwatchMode) {
+          const parts = Array(units.length).fill(0);
+          let cursor = valid ? new Date(start) : null;
+          if (valid && now >= start) {
+            const totalMonths = Math.floor(calendarElapsed(start, now, 1));
+            let consumedMonths = 0;
+            if (units[6].toggle.checked) {
+              parts[6] = Math.floor(totalMonths / 12);
+              consumedMonths = parts[6] * 12;
+            }
+            if (units[5].toggle.checked) {
+              parts[5] = totalMonths - consumedMonths;
+              consumedMonths += parts[5];
+            }
+            cursor = anniversary(start, consumedMonths);
+            const durations = [1000, 60000, 3600000, 86400000, 604800000];
+            let remaining = now - cursor;
+            for (let index = 4; index >= 0; index--) {
+              if (!units[index].toggle.checked) continue;
+              parts[index] = Math.floor(remaining / durations[index]);
+              remaining -= parts[index] * durations[index];
+            }
+          }
+          const forms = [
+            ['sekunda', 'sekundy', 'sekund'], ['minuta', 'minuty', 'minut'],
+            ['godzina', 'godziny', 'godzin'], ['dzień', 'dni', 'dni'],
+            ['tydzień', 'tygodnie', 'tygodni'], ['miesiąc', 'miesiące', 'miesięcy'], ['rok', 'lata', 'lat']
+          ];
+          const selected = units.flatMap((unit, index) => {
+            if (!unit.toggle.checked) return [];
+            if (!valid) return [`${unit.name}: —`];
+            const count = parts[index];
+            const form = count === 1 ? 0 : count % 10 >= 2 && count % 10 <= 4 && !(count % 100 >= 12 && count % 100 <= 14) ? 1 : 2;
+            return [`${count} ${forms[index][form]}`];
+          }).reverse();
+          const readout = selected.length ? selected.join('\n') : 'Wybierz jednostki';
+          if (digital.textContent !== readout) digital.textContent = readout;
+          digitalDate.textContent = !valid ? 'WYBIERZ POCZĄTEK' : now < start ? 'OCZEKIWANIE' : 'UPŁYNĘŁO';
+        }
+        const message = !valid ? 'Wybierz datę i godzinę początku.' : now < start ? 'Oczekiwanie na wybrany moment.' :
+          `Upłynęło: ${Math.floor(seconds / 86400)} dni ${pad(Math.floor(seconds / 3600) % 24)}:${pad(Math.floor(seconds / 60) % 60)}:${pad(Math.floor(seconds) % 60)}`;
+        if (elapsedTotal.textContent !== message) elapsedTotal.textContent = message;
+      }
       const ranges = [];
       let nextId = 1;
       form.addEventListener('submit', event => event.preventDefault());
@@ -216,17 +369,21 @@
       function refresh() {
         const now = new Date();
         updateCountdown(now);
+        updateStopwatch(now);
         const s = now.getSeconds() + now.getMilliseconds() / 1000;
         const m = now.getMinutes() + s / 60;
         const h = (now.getHours() % 12) + m / 60;
         hour.style.setProperty('--angle', `${h * 30}deg`);
         minute.style.setProperty('--angle', `${m * 6}deg`);
         second.style.setProperty('--angle', `${s * 6}deg`);
+        if (!stopwatchMode) {
         digital.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
         digitalDate.textContent = `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`;
+        }
         date.textContent = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long', weekday: 'long' }).format(now);
         dial.setAttribute('aria-label', `Zegar wskazuje ${pad(now.getHours())}:${pad(now.getMinutes())}`);
       }
+      setStartNow();
       addRange();
       setInterval(refresh, 50);
     })();
