@@ -7,7 +7,8 @@
     "build": "ng build",
     "test": "node --experimental-strip-types tests/time.test.ts",
     "test:e2e": "playwright test",
-    "preview": "http-server dist/horizon/browser -p 4173 -c-1"
+    "preview": "http-server dist/horizon/browser -p 4173 -c-1",
+    "screenshots": "node --experimental-strip-types scripts/screenshots.ts"
   },
   "dependencies": {
     "@angular/common": "22.2.4",
