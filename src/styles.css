@@ -96,3 +96,65 @@ app-root, .stage, .range-form { min-width: 0; }
 .signature { margin-top: 6px; color: #9bb0ba; font-size: 12px; letter-spacing: .08em; }
 .footer { flex-wrap: wrap; }
 .footer time { font-variant-numeric: tabular-nums; }
+.world-heading { font-size: 20px; color: var(--ice); margin-top: 24px; }
+.world-settings summary { cursor: pointer; color: var(--ice); font-weight: 650; padding: 4px 0; }
+.world-add { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); align-items: end; gap: 12px; margin-top: 18px; }
+.world-add label { margin: 0; }
+.world-add select { min-width: 0; }
+.world-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+.world-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: 14px; margin-top: 20px; }
+.world-card { min-width: 0; padding: 14px 8px; border: 1px solid #304c58; border-radius: 16px; background: #0a1923cc; }
+.world-card h3 { color: var(--ice); font-size: 15px; margin: 0; overflow-wrap: anywhere; }
+.world-card .world-watch { width: 140px; height: 140px; margin: 14px auto; box-shadow: 0 0 0 1px #263d4b, 0 8px 20px #0006; }
+.world-watch .bezel { inset: 5px; }
+.world-watch .dial { inset: 4px; }
+.world-watch .tick.major::before { height: 5px; width: 1px; left: calc(50% - .5px); }
+.world-watch .numeral { font-size: 8px; }
+.world-watch .hour { width: 4px; }
+.world-watch .minute { width: 3px; }
+.world-watch .second { width: 1px; }
+.world-watch .pin { width: 8px; height: 8px; border-width: 2px; }
+.world-time { display: block; color: var(--ice); font: 700 20px ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.world-date { color: #9bb0ba; font-size: 12px; margin-top: 6px; }
+.world-zone { color: #77919e; font-size: 10px; margin-top: 6px; overflow-wrap: anywhere; }
+
+.world-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.world-filter label { width: 100%; margin: 0; }
+.world-filter input { flex: 1; min-width: 0; width: auto; margin: 0; }
+.world-filter > button { margin: 0; }
+.countdown-overview { min-width: 0; }
+.overview-clock { min-width: 0; }
+.overview-all { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 24px; }
+.overview-all .watch-shell { width: min(38vw, 360px); height: min(38vw, 360px); }
+.overview-processes.range-form { margin: 26px 0 19px; padding: 16px 10px; width: 100%; }
+.process-summary { table-layout: fixed; }
+.process-summary th, .process-summary td { padding: 10px 6px; overflow-wrap: anywhere; }
+.process-summary th:first-child { width: 34%; }
+.process-summary th:nth-child(2) { width: 43%; }
+.process-summary th:last-child { width: 23%; }
+.process-summary td { font-variant-numeric: tabular-nums; }
+.process-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+.summary-note { display: block; color: #9bb0ba; font-size: 10px; margin-top: 4px; }
+.summary-hidden { opacity: .65; }
+.process-summary .error { color: #ffb4ab; }
+.overview-navigation { display: none; }
+@media (max-width: 700px) {
+  .overview-all { display: flex; align-items: stretch; gap: 0; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .overview-all::-webkit-scrollbar { display: none; }
+  .overview-all > * { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+  .overview-all .watch-shell { width: min(76vw, 428px); height: min(76vw, 428px); }
+  .overview-processes.range-form { align-self: center; margin: 20px 0; }
+  .overview-navigation { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 12px; }
+  .overview-navigation button { padding: 7px 12px; border: 1px solid #395762; border-radius: 8px; color: var(--ice); background: #0a1923; font: inherit; cursor: pointer; }
+  .overview-navigation button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+}
+@media (max-width: 480px) {
+  .overview-all .watch-shell { width: min(92vw, 428px); height: min(92vw, 428px); }
+}
+@media (prefers-reduced-motion: reduce) { .countdown-overview { scroll-behavior: auto; } }
+
+.process-summary.no-percent th:first-child { width: 40%; }
+.process-summary.no-percent th:nth-child(2) { width: 60%; }
+
+.elapsed-summary .summary-select { margin: 0; font-size: 12px; color: var(--white); gap: 7px; align-items: start; }
+.elapsed-summary .summary-select input { width: 16px; height: 16px; flex-shrink: 0; }

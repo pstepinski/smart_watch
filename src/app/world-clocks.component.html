@@ -1,0 +1,56 @@
+<h2 class="world-heading">{{ t('Zegary świata') }}</h2>
+<div class="range-form world-filter">
+  <label for="worldSearch">{{ t('Filtruj po nazwie miasta') }}</label>
+  <input id="worldSearch" type="search" [ngModel]="search()" (ngModelChange)="search.set($event)" [placeholder]="t('Wpisz nazwę miasta…')" aria-controls="worldCityTable worldGrid">
+  @if (search()) { <button type="button" (click)="search.set('')">{{ t('Wyczyść filtr') }}</button> }
+</div>
+@if (search().trim() && filteredClocks().length === 0) { <p class="range-help" role="status">{{ t('Brak miast pasujących do filtra.') }}</p> }
+<details class="range-form world-settings">
+  <summary>{{ t('Miasta i ustawienia') }} ({{ state.worldClocks.length }})</summary>
+  <div class="world-add">
+    <label>{{ t('Miasto') }}<select [attr.aria-label]="t('Miasto')" [(ngModel)]="selectedCity" (ngModelChange)="error.set('')">
+      @for (city of cities; track $index) { <option [value]="$index">{{ t(city[0]) }} · {{ city[1] }}</option> }
+      <option value="custom">{{ t('Inne miasto…') }}</option>
+    </select></label>
+    @if (selectedCity === 'custom') {
+      <label>{{ t('Nazwa miasta') }}<input type="text" maxlength="80" [(ngModel)]="customName"></label>
+      <label>{{ t('Strefa czasowa') }}<select [attr.aria-label]="t('Strefa czasowa')" [(ngModel)]="customZone">@for (zone of zones; track zone) { <option [value]="zone">{{ zone }}</option> }</select></label>
+    }
+    <button type="button" (click)="add()">{{ t('+ Dodaj zegar') }}</button>
+  </div>
+  @if (error()) { <p class="range-status error" role="status">{{ t(error()) }}</p> }
+  <div class="world-actions">
+    <button type="button" (click)="setAll(true)">{{ t('Pokaż wszystkie') }}</button>
+    <button type="button" (click)="setAll(false)">{{ t('Ukryj wszystkie') }}</button>
+    <button type="button" (click)="restore()">{{ t('Przywróć domyślne zegary') }}</button>
+  </div>
+  <div class="table-scroll"><table class="range-table" id="worldCityTable">
+    <caption>{{ t('Lista miast') }}</caption>
+    <thead><tr><th scope="col">{{ t('Pokaż') }}</th><th scope="col">{{ t('Miasto') }}</th><th scope="col">{{ t('Strefa czasowa') }}</th><th scope="col">{{ t('Godzina') }}</th><th scope="col">{{ t('Akcje') }}</th></tr></thead>
+    <tbody>@for (clock of filteredClocks(); track clock.entry.id) {
+      <tr>
+        <td><label class="display-toggle"><input type="checkbox" role="switch" [(ngModel)]="clock.entry.visible" (ngModelChange)="changed()" [attr.aria-label]="t('Pokaż zegar: ') + t(clock.entry.name)"></label></td>
+        <td>{{ t(clock.entry.name) }}</td><td>{{ clock.entry.timeZone }}</td><td>{{ clock.time }} · {{ clock.offset }}</td>
+        <td><button type="button" (click)="remove(clock.entry)" [attr.aria-label]="t('Usuń zegar: ') + t(clock.entry.name)">{{ t('Usuń') }}</button></td>
+      </tr>
+    }</tbody>
+  </table></div>
+</details>
+<div class="world-grid" id="worldGrid">
+  @for (clock of filteredClocks(); track clock.entry.id) {
+    @if (clock.entry.visible) {
+      <article class="world-card" [attr.aria-label]="t(clock.entry.name)">
+        <h3>{{ t(clock.entry.name) }}</h3>
+        <div class="watch-shell world-watch"><div class="bezel"><div class="dial" role="img" [attr.aria-label]="t(clock.entry.name) + ': ' + clock.time">
+          @for (tick of ticks; track tick) { <div class="tick major" [style.--rot]="tick * 30 + 'deg'"></div> }
+          <div class="numeral n12">12</div><div class="numeral n3">3</div><div class="numeral n6">6</div><div class="numeral n9">9</div>
+          <div class="hand hour" [style.--angle]="clock.hourAngle"></div><div class="hand minute" [style.--angle]="clock.minuteAngle"></div><div class="hand second" [style.--angle]="clock.secondAngle"></div><div class="pin"></div>
+        </div></div></div>
+        <time class="world-time">{{ clock.time }}</time>
+        <div class="world-date">{{ clock.date }}</div>
+        <div class="world-zone">{{ clock.offset }} · {{ clock.entry.timeZone }}</div>
+      </article>
+    }
+  }
+</div>
+@if (state.worldClocks.length === 0) { <p class="range-help">{{ t('Brak zegarów. Dodaj miasto lub przywróć domyślne zegary.') }}</p> }

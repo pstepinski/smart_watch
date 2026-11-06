@@ -1,3 +1,4 @@
+import { defaultWorldClocks, validTimeZone, zonedTime } from '../src/app/world-clocks.ts';
 import { browserLanguage } from '../src/app/translations.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -130,4 +131,37 @@ test('język przeglądarki wybiera PL dla polskiego i EN dla pozostałych', () =
   assert.equal(loadState(saved, new Date(), 'en').state.language, 'pl');
   const old: Record<string, unknown> = JSON.parse(JSON.stringify(state)); delete old['language'];
   assert.equal(loadState({ ...saved, getItem: () => JSON.stringify(old) }, new Date(), 'en').state.language, 'en');
+});
+
+
+test('domyślne zegary obejmują Warszawę i 30 miast z prawidłowymi strefami', () => {
+  const clocks = defaultWorldClocks();
+  assert.equal(clocks.length, 30);
+  assert.equal(clocks[0].timeZone, 'Europe/Warsaw');
+  assert(clocks.every(clock => validTimeZone(clock.timeZone)));
+  clocks[0].visible = false;
+  assert.equal(defaultWorldClocks()[0].visible, true);
+});
+test('zegary świata uwzględniają czas letni, inne daty i niepełne przesunięcia godzin', () => {
+  const winter = new Date('2026-01-01T00:00:00Z');
+  assert.equal(zonedTime(winter, 'Europe/Warsaw', 'pl-PL').time, '01:00:00');
+  assert.equal(zonedTime(new Date('2026-07-01T00:00:00Z'), 'Europe/Warsaw', 'pl-PL').time, '02:00:00');
+  assert.equal(zonedTime(winter, 'Asia/Kolkata', 'en-GB').time, '05:30:00');
+  const ny = zonedTime(winter, 'America/New_York', 'en-GB');
+  assert.equal(ny.time, '19:00:00'); assert.match(ny.date, /31/);
+});
+test('migracja dodaje zegary bez utraty stanu, pusty zestaw i własne miasta pozostają zapisane', () => {
+  const state = createState();
+  const old: Record<string, unknown> = JSON.parse(JSON.stringify(state));
+  delete old['worldClocks']; delete old['nextWorldClockId'];
+  const store = { getItem: () => JSON.stringify(old), setItem: () => {} };
+  const loaded = loadState(store);
+  assert.equal(loaded.error, ''); assert.equal(loaded.state.worldClocks.length, 30);
+  assert.deepEqual(loaded.state.processes, state.processes);
+  state.worldClocks = []; state.mode = 'world';
+  assert.equal(isAppState(state), true);
+  assert.deepEqual(loadState({ ...store, getItem: () => JSON.stringify(state) }).state.worldClocks, []);
+  state.worldClocks = [{ id: 1, name: 'Moje miasto', timeZone: 'Asia/Kathmandu', visible: true }];
+  assert.equal(isAppState(state), true);
+  state.worldClocks[0].timeZone = 'Bad/Zone'; assert.equal(isAppState(state), false);
 });

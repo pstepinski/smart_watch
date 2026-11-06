@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { SwUpdate } from '@angular/service-worker';
 import { I18nService } from './i18n.service';
 import { StateService } from './state.service';
+import { WorldClocksComponent } from './world-clocks.component';
 import { UnitPickerComponent } from './unit-picker.component';
 import { clockUnits, localDate, localTime, PALETTE, UNITS } from './models';
 import type { CountFrom, Mode, Process } from './models';
@@ -15,7 +16,7 @@ interface InstallEvent extends Event {
 }
 @Component({
   selector: 'app-root', standalone: true,
-  imports: [FormsModule, UnitPickerComponent],
+  imports: [FormsModule, UnitPickerComponent, WorldClocksComponent],
   templateUrl: './app.component.html'
 })
 export class AppComponent implements OnDestroy {
@@ -26,7 +27,7 @@ export class AppComponent implements OnDestroy {
   readonly palette = PALETTE;
   readonly tabs: { id: Mode; label: string }[] = [
     { id: 'clock', label: 'Zegarek' }, { id: 'countdown', label: 'Odliczanie do' },
-    { id: 'stopwatch', label: 'Odliczanie od' }, { id: 'timer', label: 'Stoper' }
+    { id: 'stopwatch', label: 'Odliczanie od' }, { id: 'timer', label: 'Stoper' }, { id: 'world', label: 'Zegary świata' }
   ];
   readonly ticks = Array.from({ length: 60 }, (_, index) => index);
   readonly now = signal(Date.now());
@@ -49,16 +50,24 @@ export class AppComponent implements OnDestroy {
     const now = new Date(this.now());
     const processes = this.state.processes.map(entry => {
       const timing = processTiming(entry, now, language);
-      const status = timing.error || (now < timing.start ? `${this.t('Oczekiwanie na początek · do końca')} ${formatDuration(+timing.end - +now, language)}` :
+      let status = timing.error || (now < timing.start ? `${this.t('Oczekiwanie na początek · do końca')} ${formatDuration(+timing.end - +now, language)}` :
         timing.progress >= 1 ? this.t('Zakończono · 100%') : `${this.t('Pozostało')} ${formatDuration(+timing.end - +now, language)} · ${Math.floor(timing.progress * 100)}%`);
-      return { entry, timing, status };
+      const secondsLeft = Math.max(0, Math.ceil((+timing.end - +now) / 1000));
+      const days = Math.floor(secondsLeft / 86400);
+      const hours = Math.floor(secondsLeft / 3600) % 24;
+      const minutes = Math.floor(secondsLeft / 60) % 60;
+      const seconds = secondsLeft % 60;
+      const remainingUnits = timing.error ? '—' : `${days ? days + ' d ' : ''}${hours} ${language === 'en' ? 'h' : 'godz.'} ${minutes} min ${seconds} s`;
+      if (!entry.startTime) status = timing.error || remainingUnits;
+      return { entry, timing, status, remainingUnits, percent: entry.startTime ? Math.floor(timing.progress * 100) : null };
     });
     const countFrom = this.state.countFrom.map(entry => {
       const start = new Date(`${entry.startDate || localDate(now)}T${entry.startTime}`);
       const valid = Number.isFinite(+start);
       const values = valid ? elapsedValues(start, now) : null;
       const status = !valid ? this.t('Podaj godzinę początku (data jest opcjonalna).') : now < start ? this.t('Oczekiwanie na wybrany moment.') : `${this.t('Upłynęło:')} ${formatDuration(+now - +start, language)}`;
-      return { entry, start, valid, values, status };
+      const elapsedUnits = valid ? formatSelectedTime(start, now, entry.units, language, true) : '—';
+      return { entry, start, valid, values, status, elapsedUnits };
     });
     let digitalTime = localTime(now);
     let digitalLabel = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
@@ -66,7 +75,7 @@ export class AppComponent implements OnDestroy {
     let rings: Ring[] = [];
     const timerElapsed = this.timerElapsed();
     if (this.state.mode === 'countdown' && this.state.countdownMode === 'all') {
-      const visible = processes.filter(item => item.entry.visible);
+      const visible = processes.filter(item => item.entry.visible && item.entry.startTime);
       const spacing = Math.min(3.5, 20 / Math.max(1, visible.length - 1));
       rings = visible.filter(item => !item.timing.error && item.timing.progress < 1).map(item => ({
         key: `process-${item.entry.id}`, radius: 28 - visible.indexOf(item) * spacing,
@@ -97,7 +106,8 @@ export class AppComponent implements OnDestroy {
     const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
     const minutes = now.getMinutes() + seconds / 60;
     return {
-      processes, countFrom, rings, digitalTime, digitalLabel, compact, timerElapsed, currentTime: localTime(now),
+      hasOverview: this.state.mode === 'stopwatch' || (this.state.mode === 'countdown' && this.state.countdownMode === 'all'),
+      processes, visibleProcesses: processes.filter(item => item.entry.visible), showProcessPercent: processes.some(item => item.entry.visible && item.entry.startTime), countFrom, rings, digitalTime, digitalLabel, compact, timerElapsed, currentTime: localTime(now),
       secondAngle: `${seconds * 6}deg`, minuteAngle: `${minutes * 6}deg`, hourAngle: `${((now.getHours() % 12) + minutes / 60) * 30}deg`,
       dateLabel: new Intl.DateTimeFormat(language === 'en' ? 'en-GB' : 'pl-PL', { day: 'numeric', month: 'long', weekday: 'long' }).format(now)
     };
@@ -204,6 +214,14 @@ export class AppComponent implements OnDestroy {
   lapTimer(): void {
     if (this.state.timer.status !== 'running') return;
     this.saveTimerResult(`Okrążenie ${++this.state.timer.lap}`);
+    this.changed();
+  }
+  deleteTimerResult(id: number): void {
+    this.state.timer.results = this.state.timer.results.filter(result => result.id !== id);
+    this.changed();
+  }
+  clearTimerResults(): void {
+    this.state.timer.results = [];
     this.changed();
   }
   private saveTimerResult(kind: string): void {

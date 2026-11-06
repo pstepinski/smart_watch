@@ -166,21 +166,21 @@ test('sama godzina celu zapisuje bieżący początek i zachowuje odliczanie po r
   await page.getByRole('tab', { name: 'Odliczanie do', exact: true }).click();
   await page.getByLabel('Godzina końca: Pasek 1', { exact: true }).fill('13:00');
   await page.getByLabel('Godzina początku: Pasek 1', { exact: true }).fill('');
-  await expect(page.locator('#countdownPanel .range-status')).toContainText('Pozostało 01:00:00');
+  await expect(page.locator('#countdownPanel .range-status')).toContainText('1 godz. 0 min 0 s');
   const origin = (await saved(page)).processes[0].automaticStart;
   await page.clock.setFixedTime(new Date('2026-01-01T12:30:00'));
-  await expect(page.locator('.countdown-ring circle')).toHaveCSS('stroke-dasharray', '50px, 100px');
+  await expect(page.locator('.countdown-ring circle')).toHaveCount(0);
   await page.getByLabel('Nazwa procesu 1', { exact: true }).fill('Cel');
   expect((await saved(page)).processes[0].automaticStart).toBe(origin);
   await page.reload();
-  await expect(page.locator('#countdownPanel .range-status')).toContainText('Pozostało 00:30:00');
+  await expect(page.locator('#countdownPanel .range-status')).toContainText('0 godz. 30 min 0 s');
   expect((await saved(page)).processes[0].automaticStart).toBe(origin);
   await page.getByLabel('Widok odliczania').selectOption('single');
   await page.getByLabel('Zestaw jednostek: Odliczanie do').selectOption('clock');
   await expect(page.locator('#digitalTime')).toHaveText('00:30:00');
   await page.clock.setFixedTime(new Date('2026-01-02T12:30:00'));
   await expect(page.locator('#digitalTime')).toHaveText('00:00:00');
-  await expect(page.locator('#countdownPanel .range-status')).toContainText('Zakończono');
+  await expect(page.locator('#countdownPanel .range-status')).toContainText('0 godz. 0 min 0 s');
 });
 
 test('PL/EN tłumaczy interfejs, zapamiętuje wybór i zachowuje własne nazwy oraz wyniki', async ({ page }) => {
@@ -232,3 +232,201 @@ for (const [locale, language, tab] of [['pl-PL', 'pl', 'Zegarek'], ['en-US', 'en
     });
   });
 }
+
+test('zegary świata mają 30 domyślnych miast, zapis widoczności, usuwanie i przywracanie', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-01-01T00:00:00Z'));
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Zegary świata', exact: true }).click();
+  await expect(page.locator('.world-card')).toHaveCount(30);
+  await expect(page.getByRole('article', { name: 'Warszawa', exact: true }).locator('time')).toHaveText('01:00:00');
+  await page.locator('.world-settings summary').click();
+  await page.getByRole('button', { name: 'Ukryj wszystkie', exact: true }).click();
+  await expect(page.locator('.world-card')).toHaveCount(0);
+  await page.getByRole('switch', { name: 'Pokaż zegar: Warszawa', exact: true }).check();
+  await expect(page.locator('.world-card')).toHaveCount(1);
+  await page.reload();
+  await expect(page.getByRole('tab', { name: 'Zegary świata', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.world-card')).toHaveCount(1);
+  await page.locator('.world-settings summary').click();
+  await page.getByRole('button', { name: 'Usuń zegar: Warszawa', exact: true }).click();
+  await expect(page.locator('.world-settings tbody tr')).toHaveCount(29);
+  await page.getByRole('button', { name: 'Przywróć domyślne zegary', exact: true }).click();
+  await expect(page.locator('.world-card')).toHaveCount(30);
+  await page.reload();
+  await expect(page.locator('.world-card')).toHaveCount(30);
+});
+test('dodaje miasto z listy i własne ze strefą, zachowuje je po restarcie i tłumaczy interfejs', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Zegary świata', exact: true }).click();
+  await page.locator('.world-settings summary').click();
+  await page.getByLabel('Miasto', { exact: true }).selectOption('30');
+  await page.getByRole('button', { name: '+ Dodaj zegar', exact: true }).click();
+  await expect(page.getByRole('article', { name: 'Zurych', exact: true })).toBeVisible();
+  await page.getByLabel('Miasto', { exact: true }).selectOption('custom');
+  await page.getByLabel('Nazwa miasta', { exact: true }).fill('Moje miasto');
+  await page.getByLabel('Strefa czasowa', { exact: true }).selectOption('Asia/Kathmandu');
+  await page.getByRole('button', { name: '+ Dodaj zegar', exact: true }).click();
+  await expect(page.locator('.world-card')).toHaveCount(32);
+  await page.reload();
+  await expect(page.getByRole('article', { name: 'Moje miasto', exact: true })).toContainText('UTC+5:45');
+  await page.locator('#languageSelect').selectOption('en');
+  await expect(page.getByRole('tab', { name: 'World clocks', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('article', { name: 'Warsaw', exact: true })).toBeVisible();
+  await expect(page.getByRole('article', { name: 'Moje miasto', exact: true })).toBeVisible();
+});
+test('mobilne zegary świata są okrągłe i mieszczą się na ekranie', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Zegary świata', exact: true }).click();
+  const boxes = await page.locator('.world-watch, .world-watch .bezel, .world-watch .dial').evaluateAll(elements => elements.map(element => { const b = element.getBoundingClientRect(); return { width: b.width, height: b.height, right: b.right, left: b.left }; }));
+  expect(boxes.every(b => Math.abs(b.width - b.height) < 1 && b.left >= 0 && b.right <= 390)).toBe(true);
+  await page.screenshot({ path: 'test-results/world-mobile.png', fullPage: true });
+});
+
+test('filtr miast obejmuje tabelę i zegary, polskie i angielskie nazwy oraz diakrytykę', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Zegary świata', exact: true }).click();
+  await page.getByLabel('Filtruj po nazwie miasta').fill(' WARSAW ');
+  await expect(page.locator('.world-card')).toHaveCount(1);
+  await expect(page.getByRole('article', { name: 'Warszawa', exact: true })).toBeVisible();
+  await page.locator('.world-settings summary').click();
+  await expect(page.locator('#worldCityTable tbody tr')).toHaveCount(1);
+  await page.getByLabel('Filtruj po nazwie miasta').fill('paryz');
+  await expect(page.getByRole('article', { name: 'Paryż', exact: true })).toBeVisible();
+  await expect(page.locator('#worldCityTable tbody tr')).toHaveCount(1);
+  await page.getByLabel('Filtruj po nazwie miasta').fill('brak-takiego-miasta');
+  await expect(page.locator('.world-card')).toHaveCount(0);
+  await expect(page.getByText('Brak miast pasujących do filtra.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Wyczyść filtr', exact: true }).click();
+  await expect(page.locator('.world-card')).toHaveCount(30);
+  await expect(page.locator('#worldCityTable tbody tr')).toHaveCount(30);
+  await page.getByLabel('Filtruj po nazwie miasta').fill('warsz');
+  await page.locator('#languageSelect').selectOption('en');
+  await expect(page.getByRole('article', { name: 'Warsaw', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Filter by city name')).toHaveValue('warsz');
+});
+
+test('usuwa pojedyncze i wszystkie wyniki stopera bez przerywania pomiaru, zapisuje usunięcia', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Stoper', exact: true }).click();
+  const clear = page.getByRole('button', { name: 'Usuń wszystkie wyniki', exact: true });
+  await expect(clear).toBeDisabled();
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect.poll(() => timerValue(page)).toBeGreaterThan(.1);
+  await page.getByRole('button', { name: 'Okrążenie', exact: true }).click();
+  await page.getByRole('button', { name: 'Okrążenie', exact: true }).click();
+  await expect(page.locator('#timerPanel tbody tr')).toHaveCount(2);
+  const before = await saved(page);
+  await page.getByRole('button', { name: 'Usuń wynik: Okrążenie 1 · Pomiar 1', exact: true }).click();
+  await expect(page.locator('#timerPanel tbody tr')).toHaveCount(1);
+  await expect(page.locator('#timerPanel tbody')).toContainText('Okrążenie 2');
+  expect((await saved(page)).timer.lastResult).toBe(before.timer.lastResult);
+  await page.reload();
+  await expect(page.locator('#timerPanel tbody tr')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Pauza', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Usuń wszystkie wyniki', exact: true }).click();
+  await expect(page.locator('#timerPanel tbody tr')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Usuń wszystkie wyniki', exact: true })).toBeDisabled();
+  expect((await saved(page)).timer.status).toBe('running');
+  await page.reload();
+  await expect(page.locator('#timerPanel tbody tr')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Okrążenie', exact: true }).click();
+  await expect(page.locator('#timerPanel tbody')).toContainText('Okrążenie 3');
+  await page.getByRole('button', { name: 'Stop', exact: true }).click();
+  await expect(page.locator('#timerPanel tbody tr')).toHaveCount(2);
+  await page.locator('#languageSelect').selectOption('en');
+  await expect(page.getByRole('button', { name: 'Delete all results', exact: true })).toBeEnabled();
+});
+
+test('odliczanie wielu procesów ma tabelę obok zegarka z jednostkami i procentem upływu', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-01-01T12:00:00'));
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Odliczanie do', exact: true }).click();
+  const clock = (await page.locator('#overviewClock').boundingBox())!;
+  const summary = (await page.locator('#overviewProcesses').boundingBox())!;
+  expect(summary.x).toBeGreaterThan(clock.x + clock.width);
+  await expect(page.locator('.process-summary tbody tr')).toHaveCount(1);
+  await expect(page.locator('.process-summary tbody tr')).toContainText('4 godz. 0 min 0 s');
+  await expect(page.locator('.process-summary tbody tr')).toContainText('50%');
+  await page.getByRole('button', { name: '+ Dodaj pasek', exact: true }).click();
+  await expect(page.locator('.process-summary tbody tr')).toHaveCount(2);
+  await page.getByRole('switch', { name: 'Pokaż proces: Pasek 2', exact: true }).uncheck();
+  await expect(page.locator('.process-summary tbody tr')).toHaveCount(1);
+  await expect(page.locator('.process-summary')).not.toContainText('Pasek 2');
+  await page.getByRole('switch', { name: 'Pokaż proces: Pasek 2', exact: true }).check();
+  await expect(page.locator('.process-summary tbody tr')).toHaveCount(2);
+  await page.getByLabel('Godzina końca: Pasek 2', { exact: true }).fill('');
+  await expect(page.locator('.process-summary tbody tr').nth(1)).toContainText('—');
+  await page.getByLabel('Widok odliczania').selectOption('single');
+  await expect(page.locator('#overviewProcesses')).toHaveCount(0);
+});
+
+test.describe('karuzela odliczania na telefonie', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test('przesuwa zegarek gestem do tabeli i pozwala wrócić przyciskiem', async ({ page, context }) => {
+    await page.goto('/');
+    await page.getByRole('tab', { name: 'Odliczanie do', exact: true }).click();
+    const carousel = page.locator('.countdown-overview');
+    const bounds = (await carousel.boundingBox())!;
+    const y = Math.min(bounds.y + 150, 700);
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 340, y }] });
+    for (const x of [300, 240, 180, 120, 60]) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect.poll(() => carousel.evaluate(el => Math.abs(el.scrollLeft - el.clientWidth))).toBeLessThan(1);
+    const table = (await page.locator('#overviewProcesses').boundingBox())!;
+    expect(table.x).toBeGreaterThanOrEqual(0);
+    expect(table.x + table.width).toBeLessThanOrEqual(391);
+    await page.getByRole('navigation', { name: 'Karty odliczania' }).getByRole('button', { name: 'Zegarek', exact: true }).click();
+    await expect.poll(() => carousel.evaluate(el => el.scrollLeft)).toBeLessThan(1);
+    await page.getByRole('navigation', { name: 'Karty odliczania' }).getByRole('button', { name: 'Procesy', exact: true }).click();
+    await expect.poll(() => carousel.evaluate(el => Math.abs(el.scrollLeft - el.clientWidth))).toBeLessThan(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+    await expect.poll(async () => (await page.locator('#overviewProcesses').boundingBox())!.x).toBeLessThan(10);
+    await page.screenshot({ path: 'test-results/countdown-carousel.png', fullPage: true });
+  });
+});
+
+
+test('pusty początek w widoku wszystkich procesów pokazuje tylko pozostałe jednostki bez pierścienia i procentu', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-01-01T12:00:00'));
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Odliczanie do', exact: true }).click();
+  await page.getByRole('button', { name: '+ Dodaj pasek', exact: true }).click();
+  await page.getByLabel('Godzina początku: Pasek 2', { exact: true }).fill('');
+  await expect(page.locator('.countdown-ring circle')).toHaveCount(1);
+  const automatic = page.locator('.process-summary tbody tr').nth(1);
+  await expect(automatic).toContainText('4 godz. 0 min 0 s');
+  await expect(automatic).not.toContainText('%');
+  await expect(page.locator('#countdownPanel .range-status').nth(1)).not.toContainText('%');
+  await expect(page.locator('.process-summary tbody tr').first()).toContainText('50%');
+  await page.getByLabel('Godzina początku: Pasek 1', { exact: true }).fill('');
+  await expect(page.locator('.countdown-ring circle')).toHaveCount(0);
+  await expect(page.locator('.process-summary')).not.toContainText('%');
+  await page.getByLabel('Widok odliczania').selectOption('single');
+  await expect(page.locator('.countdown-ring circle')).toHaveCount(7);
+});
+
+test('odliczanie od ma podsumowanie wszystkich procesów z jednostkami i wyborem zegarka', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-01-01T12:00:00'));
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Odliczanie od', exact: true }).click();
+  await page.getByLabel('Godzina początku: Stoper 1', { exact: true }).fill('10:00:00');
+  await page.getByRole('button', { name: '+ Dodaj pozycję', exact: true }).click();
+  await page.getByLabel('Godzina początku: Stoper 2', { exact: true }).fill('11:00:00');
+  await expect(page.locator('.elapsed-summary tbody tr')).toHaveCount(2);
+  await expect(page.locator('.elapsed-summary tbody tr').first()).toContainText('2 godz. 0 min 0 s');
+  await expect(page.locator('.elapsed-summary tbody tr').nth(1)).toContainText('1 godz. 0 min 0 s');
+  const clock = (await page.locator('#overviewClock').boundingBox())!;
+  expect((await page.locator('#overviewProcesses').boundingBox())!.x).toBeGreaterThan(clock.x + clock.width);
+  await page.getByRole('radio', { name: 'Wybierz proces: Stoper 2', exact: true }).check();
+  await expect(page.locator('#digitalDate')).toHaveText('Stoper 2');
+  await page.reload();
+  await expect(page.getByRole('radio', { name: 'Wybierz proces: Stoper 2', exact: true })).toBeChecked();
+  await page.getByLabel('Zestaw jednostek: Stoper 1').selectOption('seconds');
+  await expect(page.locator('.elapsed-summary tbody tr').first()).toContainText('7200 s');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('navigation', { name: 'Karty odliczania' }).getByRole('button', { name: 'Procesy', exact: true }).click();
+  await expect.poll(() => page.locator('.countdown-overview').evaluate(el => Math.abs(el.scrollLeft - el.clientWidth))).toBeLessThan(1);
+  expect((await page.locator('#overviewProcesses').boundingBox())!.x).toBeLessThan(10);
+});

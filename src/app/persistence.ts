@@ -1,3 +1,4 @@
+import { defaultWorldClocks, validTimeZone } from './world-clocks.ts';
 import type { Language } from './translations.ts';
 import { createState, PALETTE } from './models.ts';
 import type { AppState } from './models.ts';
@@ -15,8 +16,12 @@ const uniqueIds = (rows: unknown[]): boolean => new Set(rows.map(row => (row as 
 export function isAppState(value: unknown): value is AppState {
   if (!record(value) || value['version'] !== 1) return false;
   if (value['language'] !== 'pl' && value['language'] !== 'en') return false;
-  if (!['clock', 'countdown', 'stopwatch', 'timer'].includes(String(value['mode'])) || typeof value['showDigital'] !== 'boolean') return false;
+  if (!['clock', 'countdown', 'stopwatch', 'timer', 'world'].includes(String(value['mode'])) || typeof value['showDigital'] !== 'boolean') return false;
   if (!['all', 'single'].includes(String(value['countdownMode'])) || !selection(value['countdownUnits'])) return false;
+  const world = value['worldClocks'];
+  if (!Array.isArray(world) || !world.every(item => record(item) && natural(item['id']) && strings(item, ['name', 'timeZone']) &&
+    typeof item['visible'] === 'boolean' && validTimeZone(item['timeZone'] as string)) || !uniqueIds(world)) return false;
+  if (!natural(value['nextWorldClockId']) || world.some(item => item.id >= (value['nextWorldClockId'] as number))) return false;
   const processes = value['processes'];
   if (!Array.isArray(processes) || !processes.every(item => record(item) && natural(item['id']) &&
     strings(item, ['name', 'color', 'startDate', 'endDate', 'startTime', 'endTime']) &&
@@ -42,6 +47,10 @@ export function loadState(storage: LocalStore, now = new Date(), defaultLanguage
     if (raw === null) return { state: createState(now, defaultLanguage), error: '' };
     const state: unknown = JSON.parse(raw);
     if (record(state) && state['language'] === undefined) state['language'] = defaultLanguage;
+    if (record(state) && state['worldClocks'] === undefined) {
+      state['worldClocks'] = defaultWorldClocks();
+      state['nextWorldClockId'] = defaultWorldClocks().length + 1;
+    }
     if (!isAppState(state)) throw new Error('Invalid saved state');
     return { state, error: '' };
   } catch {

@@ -1,4 +1,6 @@
-export type Mode = 'clock' | 'countdown' | 'stopwatch' | 'timer';
+import { defaultWorldClocks } from './world-clocks.ts';
+import type { WorldClock } from './world-clocks.ts';
+export type Mode = 'clock' | 'countdown' | 'stopwatch' | 'timer' | 'world';
 export type UnitSelection = boolean[];
 export interface Process {
   automaticStart?: number;
@@ -49,6 +51,8 @@ export interface AppState {
   activeCountFromId: number | null;
   nextCountFromId: number;
   timer: TimerState;
+  worldClocks: WorldClock[];
+  nextWorldClockId: number;
 }
 export const PALETTE = [
   { name: 'Miętowy', color: '#5ae6c6' }, { name: 'Niebieski', color: '#65baff' },
@@ -77,6 +81,7 @@ export const localDate = (now: Date): string => `${now.getFullYear()}-${pad(now.
 export const localTime = (now: Date): string => `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 export function createState(now = new Date(), language: 'pl' | 'en' = 'pl'): AppState {
   return {
+    worldClocks: defaultWorldClocks(), nextWorldClockId: 31,
     version: 1, language, mode: 'clock', showDigital: true, countdownMode: 'all', countdownUnits: UNITS.map(() => true),
     processes: [{ id: 1, name: language === 'en' ? 'Process 1' : 'Pasek 1', color: PALETTE[0].color, visible: true, startDate: '', endDate: '', startTime: '08:00', endTime: '16:00' }],
     activeProcessId: 1, nextProcessId: 2,

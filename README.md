@@ -65,6 +65,14 @@ Manifest, ikony (w tym maskable) i konfiguracja Angular Service Worker znajdują
 
 W „Odliczaniu do” można pozostawić datę i godzinę początku puste oraz podać samą godzinę końca. Początek jest wtedy zapisywany jako moment ustawienia zakresu i zachowuje się po restarcie. Jeśli godzina końca już minęła, wybierany jest następny dzień. Można też podać konkretną datę końca.
 
+W widoku wszystkich procesów „Odliczania do” obok zegarka znajduje się tabela z pozostałym czasem w jednostkach i procentem upływu. Na ekranach do 700 px zegarek i tabela tworzą karuzelę obsługiwaną przesunięciem palca lub przyciskami „Zegarek” / „Procesy”.
+
+## Zegary świata
+
+Zakładka „Zegary świata” zawiera 30 domyślnych miast z różnych kontynentów, w tym Warszawę. Każdy widoczny zegar ma tarczę analogową, czas cyfrowy, lokalną datę i przesunięcie UTC. Strefy IANA korzystają z obsługi czasu letniego w przeglądarce.
+
+W rozwijanej sekcji „Miasta i ustawienia” można wybrać widoczne zegary, dodawać miasta z listy lub własne z wybraną strefą czasową, usuwać pozycje oraz przywrócić zestaw domyślny. Lista i widoczność są zapisywane lokalnie; aktualizacja aplikacji dodaje nowe ustawienia bez usuwania dotychczasowych danych.
+
 ## Dane na urządzeniu
 
 Stan jest zapisywany automatycznie w `localStorage`, pod kluczem `horizon.state.v1`. Obejmuje:

@@ -24,7 +24,7 @@ export function elapsedValues(start: Date, end: Date): number[] {
   return [seconds, seconds / 60, seconds / 3600, seconds / 86400, seconds / 604800,
     calendarElapsed(start, end, 1), calendarElapsed(start, end, 12)];
 }
-export function formatSelectedTime(start: Date, end: Date, selected: UnitSelection, language: Language = 'pl'): string {
+export function formatSelectedTime(start: Date, end: Date, selected: UnitSelection, language: Language = 'pl', withUnits = false): string {
   const parts = Array<number>(7).fill(0);
   if (end >= start) {
     const months = Math.floor(calendarElapsed(start, end, 1));
@@ -41,7 +41,8 @@ export function formatSelectedTime(start: Date, end: Date, selected: UnitSelecti
   }
   const suffixes: Record<number, string> = { 3: 'd', 4: language === 'en' ? 'w' : 't', 5: 'm', 6: language === 'en' ? 'y' : 'r' };
   const larger = [6, 5, 4, 3].filter(index => selected[index]).map(index => `${parts[index]}${suffixes[index]}`);
-  const time = [2, 1, 0].filter(index => selected[index]).map(index => pad(parts[index])).join(':');
+  const labels = ['s', 'min', language === 'en' ? 'h' : 'godz.'];
+  const time = [2, 1, 0].filter(index => selected[index]).map(index => withUnits ? `${parts[index]} ${labels[index]}` : pad(parts[index])).join(withUnits ? ' ' : ':');
   return [...larger, ...(time ? [time] : [])].join(' ') || '—';
 }
 export interface ProcessTiming { start: Date; end: Date; error: string; progress: number; }
