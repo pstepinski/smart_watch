@@ -44,7 +44,7 @@
   <dialog #alarmInfoDialog class="storage-banner storage-popup" aria-labelledby="alarmInfoTitle" (cancel)="$event.preventDefault()">
     <div class="storage-popup-header"><h2 id="alarmInfoTitle">{{ t('Informacje o alarmie') }}</h2></div>
         <strong>{{ t('Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie.') }}</strong>
-        <p>{{ t('Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle. Sprawdź głośność i tryb wyciszenia telefonu. Po odświeżeniu strony ponownie włącz dźwięk przyciskiem „Włącz i przetestuj dźwięk alarmów” w zakładce „Odliczanie do”. Alarm jest jednorazowy; po zmianie terminu włącz go ponownie.') }}</p>
+        <p>{{ t('Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle. Sprawdź głośność i tryb wyciszenia telefonu. Po odświeżeniu strony ponownie włącz dźwięk przyciskiem „Włącz i przetestuj dźwięk alarmów” w zakładce „Odliczanie do”. Alarm uruchamia się raz dla danego terminu i dzwoni do ręcznego wyłączenia. Po zmianie terminu włącz go ponownie.') }}</p>
     <div class="storage-banner-actions"><button type="button" (click)="acknowledgeAlarmInfo()" autofocus>{{ t('Rozumiem') }}</button></div>
   </dialog>
   @if (alarms.notices().length) {
@@ -61,6 +61,13 @@
         [tabIndex]="state.mode === tab.id ? 0 : -1" (click)="selectTab(tab.id)" (keydown)="tabKey($event, i)">{{ t(tab.label) }}</button>
     }
   </div>
+  @if (vm.hasOverview) {
+    <nav class="overview-navigation" [attr.aria-label]="t('Karty odliczania')">
+      <button type="button" (click)="overview.scrollTo({left: 0, behavior: 'smooth'})" aria-controls="overviewClock">{{ t('Zegarek') }}</button>
+      <span aria-hidden="true">↔</span>
+      <button type="button" (click)="overview.scrollTo({left: overview.clientWidth, behavior: 'smooth'})" aria-controls="overviewProcesses">{{ t('Procesy') }}</button>
+    </nav>
+  }
   <div class="countdown-overview" [class.overview-all]="vm.hasOverview" [hidden]="state.mode === 'world'" #overview>
     <div class="overview-clock" id="overviewClock" role="group" [attr.aria-label]="t('Zegarek')">
   <div class="watch-shell"><div class="bezel"><div class="dial" role="img" [attr.aria-label]="t('Zegar: ') + vm.digitalLabel + ' ' + vm.digitalTime">
@@ -87,7 +94,7 @@
           <tbody>
             @for (item of vm.visibleProcesses; track item.entry.id) {
               <tr [style.--row-color]="item.entry.color">
-                <td><span class="process-dot" [style.background]="item.entry.color"></span>{{ item.entry.name }}</td>
+                <td><span class="process-dot" [style.background]="item.entry.color"></span>{{ item.entry.name }}@if (item.entry.alarmEnabled) { <span class="alarm-bell" role="img" [attr.aria-label]="t('Alarm włączony')" [title]="t('Alarm włączony')">🔔</span> }</td>
                 <td [class.error]="item.timing.error" [title]="item.timing.error || item.status">{{ item.remainingUnits }}</td>
                 @if (vm.showProcessPercent) { <td>{{ item.percent === null ? '' : item.timing.error ? '—' : item.percent + '%' }}</td> }
               </tr>
@@ -112,13 +119,6 @@
       </div>
     }
   </div>
-  @if (vm.hasOverview) {
-    <nav class="overview-navigation" [attr.aria-label]="t('Karty odliczania')">
-      <button type="button" (click)="overview.scrollTo({left: 0, behavior: 'smooth'})" aria-controls="overviewClock">{{ t('Zegarek') }}</button>
-      <span aria-hidden="true">↔</span>
-      <button type="button" (click)="overview.scrollTo({left: overview.clientWidth, behavior: 'smooth'})" aria-controls="overviewProcesses">{{ t('Procesy') }}</button>
-    </nav>
-  }
   <div class="range-form" [hidden]="state.mode === 'world'"><label class="display-toggle" style="margin: 0"><input type="checkbox" role="switch" aria-controls="digitalDisplay" [(ngModel)]="state.showDigital" (ngModelChange)="changed()">{{ t('Pokaż wyświetlacz cyfrowy') }}</label></div>
   <div class="range-form storage-setting">
     <label class="display-toggle"><input type="checkbox" [checked]="storage.enabled()" [disabled]="storage.busy()" (change)="toggleStorage($event)">{{ t('Zapisuj dane na tym urządzeniu') }}</label>
@@ -136,7 +136,8 @@
   <section id="countdownPanel" role="tabpanel" aria-labelledby="countdownTab" [hidden]="state.mode !== 'countdown'">
     <div class="range-form">
       <div class="alarm-audio-controls">
-        <button type="button" (click)="alarms.testSound()" [disabled]="alarms.preparing()">{{ t('Włącz i przetestuj dźwięk alarmów') }}</button>
+        <button type="button" (click)="alarms.testSound()" [disabled]="alarms.preparing() || alarms.ringing()">{{ t('Włącz i przetestuj dźwięk alarmów') }}</button>
+        @if (alarms.testing()) { <button type="button" (click)="alarms.stopTest()">{{ t('Zatrzymaj test dźwięku') }}</button> }
         <span class="alarm-audio-status">{{ t(alarms.ready() ? 'Dźwięk jest włączony w tej sesji.' : 'Dźwięk wymaga włączenia w tej sesji.') }}</span>
         @if (alarms.error()) { <p class="range-status error" role="alert">{{ t(alarms.error()) }}</p> }
       </div>
@@ -164,7 +165,7 @@
               <td><label>{{ t('Data (opcjonalnie)') }}<input type="date" [(ngModel)]="entry.startDate" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Data początku: ') + entry.name"></label><label>{{ t('Godzina (opcjonalnie)') }}<input type="time" [(ngModel)]="entry.startTime" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Godzina początku: ') + entry.name"></label></td>
               <td><label>{{ t('Data (opcjonalnie)') }}<input type="date" [(ngModel)]="entry.endDate" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Data końca: ') + entry.name"></label><label>{{ t('Godzina') }}<input type="time" required [(ngModel)]="entry.endTime" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Godzina końca: ') + entry.name"></label></td>
               <td><p class="range-status" [class.error]="item.timing.error">{{ item.status }}</p></td>
-              <td><label class="display-toggle"><input type="checkbox" [checked]="entry.alarmEnabled" [disabled]="alarms.preparing()" (change)="toggleAlarm(entry, $event)" [attr.aria-label]="t('Alarm: ') + entry.name">{{ t('Alarm') }}</label>
+              <td><label class="display-toggle"><input type="checkbox" [checked]="entry.alarmEnabled" [disabled]="alarms.preparing()" (change)="toggleAlarm(entry, $event)" [attr.aria-label]="t('Alarm: ') + entry.name">{{ t('Alarm') }}@if (entry.alarmEnabled) { <span class="alarm-bell" role="img" [attr.aria-label]="t('Alarm włączony')" [title]="t('Alarm włączony')">🔔</span> }</label>
                 @if (entry.alarmFiredAt) { <p class="range-help">{{ t('Termin alarmu minął.') }}</p> }
                 <button type="button" (click)="removeProcess(entry)" [attr.aria-label]="t('Usuń: ') + entry.name">{{ t('Usuń') }}</button></td>
             </tr>

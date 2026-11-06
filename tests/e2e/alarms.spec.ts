@@ -7,8 +7,13 @@ test.beforeEach(async ({ page }) => {
     localStorage.setItem('horizon.storageConsent.v1', 'granted');
     const state = window as unknown as { alarmTones: number };
     state.alarmTones = 0;
-    const original = AudioContext.prototype.createOscillator;
-    AudioContext.prototype.createOscillator = function () { state.alarmTones++; return original.call(this); };
+    const original = AudioContext.prototype.createBufferSource;
+    AudioContext.prototype.createBufferSource = function () {
+      state.alarmTones++;
+      const source = original.call(this);
+      (window as unknown as { alarmSource: AudioBufferSourceNode }).alarmSource = source;
+      return source;
+    };
   });
   await page.clock.setFixedTime(new Date('2026-01-01T11:59:58+01:00'));
   await page.goto('/');
@@ -28,16 +33,28 @@ test('alarm jednorazowy gra przy aktywnej aplikacji i pokazuje jasną informacj�
   await expect(page.getByRole('dialog', { name: 'Informacje o alarmie', exact: true })).not.toBeVisible();
   await alarm(page).check();
   await expect(page.getByText('Dźwięk jest włączony w tej sesji.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Alarm włączony', exact: true })).toHaveCount(2);
   await beforeDeadline(page);
   await page.clock.setFixedTime(new Date('2026-01-01T12:00:00+01:00'));
   await expect(page.locator('.alarm-notices')).toContainText('Czas upłynął!');
-  expect(await tones(page)).toBe(12);
+  expect(await tones(page)).toBe(1);
   await expect(alarm(page)).not.toBeChecked();
+  await expect(page.getByRole('img', { name: 'Alarm włączony', exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { alarmSource: AudioBufferSourceNode }).alarmSource.loop)).toBe(true);
+  await page.evaluate(() => {
+    (window as unknown as { alarmEnded: boolean }).alarmEnded = false;
+    (window as unknown as { alarmSource: AudioBufferSourceNode }).alarmSource.addEventListener('ended', () => { (window as unknown as { alarmEnded: boolean }).alarmEnded = true; });
+  });
+  // A real alarm still rings after the entire 5.4-second test sequence would have ended.
+  await page.waitForTimeout(5600);
+  expect(await page.evaluate(() => (window as unknown as { alarmEnded: boolean }).alarmEnded)).toBe(false);
+  await expect(page.getByRole('button', { name: 'Włącz i przetestuj dźwięk alarmów', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Zamknij alarm i wyłącz dźwięk', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { alarmEnded: boolean }).alarmEnded)).toBe(true);
   await page.clock.setFixedTime(new Date('2026-01-01T12:00:01+01:00'));
   await expect(page.locator('#digitalTime')).toHaveText('12:00:01');
   await expect(page.locator('.alarm-notices')).toHaveCount(0);
-  expect(await tones(page)).toBe(12);
+  expect(await tones(page)).toBe(1);
   await page.reload();
   await expect(alarm(page)).not.toBeChecked();
 });
@@ -74,4 +91,26 @@ test('po przeładowaniu dźwięk wymaga gestu użytkownika, a przeterminowany al
   await page.clock.setFixedTime(new Date('2026-01-01T12:00:00+01:00'));
   await expect(page.locator('.alarm-notices')).toContainText('Termin minął, gdy alarm nie mógł zadziałać.');
   expect(await tones(page)).toBe(0);
+});
+
+
+test('test dźwięku można natychmiast zatrzymać i uruchomić ponownie bez rozbrajania alarmu', async ({ page }) => {
+  await alarm(page).check();
+  const start = page.getByRole('button', { name: 'Włącz i przetestuj dźwięk alarmów', exact: true });
+  const stop = page.getByRole('button', { name: 'Zatrzymaj test dźwięku', exact: true });
+  await start.click();
+  await expect(stop).toBeVisible();
+  await page.evaluate(() => {
+    const source = (window as unknown as { alarmSource: AudioBufferSourceNode }).alarmSource;
+    (window as unknown as { stopped: boolean }).stopped = false;
+    source.addEventListener('ended', () => { (window as unknown as { stopped: boolean }).stopped = true; });
+  });
+  await stop.click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { stopped: boolean }).stopped)).toBe(true);
+  await expect(stop).toHaveCount(0);
+  await expect(alarm(page)).toBeChecked();
+  await start.click();
+  await expect(stop).toBeVisible();
+  await stop.click();
+  expect(await tones(page)).toBe(2);
 });

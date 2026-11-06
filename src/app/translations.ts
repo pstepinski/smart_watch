@@ -2,11 +2,13 @@ export type Language = 'pl' | 'en';
 
 const english: Record<string, string> = {
   "Alarm": "Alarm",
+  "Zatrzymaj test dźwięku": "Stop sound test",
+  "Alarm włączony": "Alarm enabled",
   "Alarm: ": "Alarm: ",
   "Informacje o alarmie": "Alarm information",
   "Rozumiem": "I understand",
   "Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie.": "The alarm only works while the app is open and active, with the screen on.",
-  "Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle. Sprawdź głośność i tryb wyciszenia telefonu. Po odświeżeniu strony ponownie włącz dźwięk przyciskiem „Włącz i przetestuj dźwięk alarmów” w zakładce „Odliczanie do”. Alarm jest jednorazowy; po zmianie terminu włącz go ponownie.": "It does not work when your phone is locked, the screen is off, the app is closed or running in the background. Check your phone's volume and silent mode. After refreshing, enable sound again using “Enable and test alarm sound” in the “Countdown to” tab. Alarms are one-time; re-enable after changing the end time.",
+  "Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle. Sprawdź głośność i tryb wyciszenia telefonu. Po odświeżeniu strony ponownie włącz dźwięk przyciskiem „Włącz i przetestuj dźwięk alarmów” w zakładce „Odliczanie do”. Alarm uruchamia się raz dla danego terminu i dzwoni do ręcznego wyłączenia. Po zmianie terminu włącz go ponownie.": "It does not work when your phone is locked, the screen is off, the app is closed or running in the background. Check your phone's volume and silent mode. After refreshing, enable sound again using “Enable and test alarm sound” in the “Countdown to” tab. An alarm triggers once per deadline and keeps ringing until you dismiss it. Re-enable it after changing the end time.",
   "Włącz i przetestuj dźwięk alarmów": "Enable and test alarm sound",
   "Dźwięk jest włączony w tej sesji.": "Sound is enabled for this session.",
   "Dźwięk wymaga włączenia w tej sesji.": "Sound must be enabled for this session.",

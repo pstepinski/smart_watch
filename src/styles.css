@@ -138,13 +138,13 @@ app-root, .stage, .range-form { min-width: 0; }
 .summary-hidden { opacity: .65; }
 .process-summary .error { color: #ffb4ab; }
 .overview-navigation { display: none; }
-@media (max-width: 700px) {
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
   .overview-all { display: flex; align-items: stretch; gap: 0; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .overview-all::-webkit-scrollbar { display: none; }
   .overview-all > * { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
   .overview-all .watch-shell { width: min(76vw, 428px); height: min(76vw, 428px); }
   .overview-processes.range-form { align-self: center; margin: 20px 0; }
-  .overview-navigation { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 12px; }
+  .overview-navigation { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 16px 0 0; }
   .overview-navigation button { padding: 7px 12px; border: 1px solid #395762; border-radius: 8px; color: var(--ice); background: #0a1923; font: inherit; cursor: pointer; }
   .overview-navigation button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 }
@@ -198,3 +198,5 @@ app-root, .stage, .range-form { min-width: 0; }
 .page-information { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 28px; }
 .alarm-audio-status { display: block; margin-top: 8px; color: #9bb0ba; font-size: 12px; }
 .alarm-notices { border-color: #f4df77; }
+
+.alarm-bell { display: inline-block; margin-left: 6px; font-size: 14px; }

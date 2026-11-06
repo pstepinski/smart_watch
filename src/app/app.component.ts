@@ -42,7 +42,7 @@ export class AppComponent implements OnDestroy {
   readonly storageDialog = viewChild.required<ElementRef<HTMLDialogElement>>('storageDialog');
   readonly alarmInfoDialog = viewChild.required<ElementRef<HTMLDialogElement>>('alarmInfoDialog');
   private readonly saveOnLeave = () => this.storage.save();
-  private readonly visibilityChanged = () => { if (document.hidden) { this.alarms.stopSound(); this.storage.save(); } else this.now.set(Date.now()); };
+  private readonly visibilityChanged = () => { if (document.hidden) { this.alarms.pauseSound(); this.storage.save(); } else this.now.set(Date.now()); };
   private readonly beforeInstall = (event: Event) => { event.preventDefault(); this.installPrompt.set(event as InstallEvent); };
   private readonly installed = () => this.installPrompt.set(null);
   private readonly updates = inject(SwUpdate).versionUpdates.subscribe(event => {

@@ -8,7 +8,10 @@ export interface AlarmNotice { id: number; name: string; missed: boolean; }
 export class AlarmService {
   private readonly storage = inject(StateService);
   private context: AudioContext | null = null;
-  private nodes: OscillatorNode[] = [];
+  private source: AudioBufferSourceNode | null = null;
+  private sound: AudioBuffer | null = null;
+  readonly testing = signal(false);
+  readonly ringing = signal(false);
   private lastCheck = Date.now();
   private wasVisible = document.visibilityState === 'visible';
   readonly ready = signal(false);
@@ -33,7 +36,10 @@ export class AlarmService {
       return false;
     } finally { this.preparing.set(false); }
   }
-  async testSound(): Promise<void> { if (await this.prepare()) this.play(); }
+  async testSound(): Promise<void> {
+    if (!this.ringing() && await this.prepare() && !this.ringing()) this.play(false);
+  }
+  stopTest(): void { if (this.testing()) this.stopSound(); }
   check(now: number): void {
     const visible = document.visibilityState === 'visible';
     // Suspended pages and overdue restored alarms must not unexpectedly ring on return.
@@ -41,6 +47,7 @@ export class AlarmService {
     this.lastCheck = now;
     this.wasVisible = visible;
     const due = this.storage.state.processes.filter(entry => entry.alarmEnabled && entry.alarmAt !== undefined && entry.alarmAt <= now);
+    if (visible && this.ringing() && !this.source && this.context?.state === 'running') this.play(true);
     if (!due.length) return;
     const notices = due.map(entry => {
       const missed = !active || !this.ready() || !this.context || this.context.state !== 'running' || now - entry.alarmAt! > 2000;
@@ -49,7 +56,7 @@ export class AlarmService {
       return { id: entry.id, name: entry.name, missed };
     });
     this.notices.update(current => [...notices, ...current.filter(item => !notices.some(next => next.id === item.id))]);
-    if (notices.some(item => !item.missed)) this.play();
+    if (notices.some(item => !item.missed)) this.play(true);
     this.storage.save();
   }
   cancel(entry: Process): void {
@@ -60,27 +67,46 @@ export class AlarmService {
     if (!this.notices().length) this.stopSound();
   }
   dismiss(): void { this.stopSound(); this.notices.set([]); }
-  private play(): void {
+  private play(loop: boolean): void {
     const context = this.context;
     if (!context || context.state !== 'running' || document.visibilityState !== 'visible') return;
     this.stopSound();
-    // Six short pairs of beeps; never an indefinitely looping sound.
-    for (let index = 0; index < 12; index++) {
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      const start = context.currentTime + index * .35 + Math.floor(index / 2) * .25;
-      oscillator.frequency.value = index % 2 ? 880 : 660;
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(.12, start + .02);
-      gain.gain.setValueAtTime(.12, start + .12);
-      gain.gain.linearRampToValueAtTime(0, start + .2);
-      oscillator.connect(gain); gain.connect(context.destination);
-      oscillator.start(start); oscillator.stop(start + .22);
-      this.nodes.push(oscillator);
+    if (!this.sound) {
+      // A short sequence of paired beeps, looped by the audio engine for real alarms.
+      this.sound = context.createBuffer(1, Math.ceil(context.sampleRate * 5.4), context.sampleRate);
+      const samples = this.sound.getChannelData(0);
+      for (let index = 0; index < 12; index++) {
+        const start = index * .35 + Math.floor(index / 2) * .25;
+        const frequency = index % 2 ? 880 : 660;
+        for (let offset = 0; offset < Math.floor(context.sampleRate * .2); offset++) {
+          const time = offset / context.sampleRate;
+          const envelope = Math.min(time / .02, 1, (.2 - time) / .08);
+          samples[Math.floor(start * context.sampleRate) + offset] = .12 * envelope * Math.sin(2 * Math.PI * frequency * time);
+        }
+      }
     }
+    const source = context.createBufferSource();
+    source.buffer = this.sound;
+    source.loop = loop;
+    source.connect(context.destination);
+    this.source = source;
+    this.ringing.set(loop);
+    this.testing.set(!loop);
+    source.onended = () => {
+      source.disconnect();
+      if (this.source === source) { this.source = null; this.testing.set(false); }
+    };
+    source.start();
+  }
+  // Screen-off/background playback remains unsupported; resume a ringing alarm on return.
+  pauseSound(): void {
+    const source = this.source;
+    this.source = null;
+    if (source) { source.stop(); source.disconnect(); }
+    this.testing.set(false);
   }
   stopSound(): void {
-    for (const node of this.nodes) { try { node.stop(); node.disconnect(); } catch { /* already ended */ } }
-    this.nodes = [];
+    this.ringing.set(false);
+    this.pauseSound();
   }
 }

@@ -164,16 +164,17 @@ Każdy proces ma opcję **Alarm**. Włączenie ustawia jednorazowy alarm na wyli
 
 **Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie. Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle — także w zainstalowanej PWA.** Ta informacja pojawia się w popupie przy pierwszym otwarciu zakładki „Odliczanie do”, w PL i EN. Przycisk „Rozumiem” zamyka popup; przy włączonym zapisie danych wybór jest pamiętany również po odświeżeniu. Bez zapisu jest pamiętany tylko do odświeżenia lub zamknięcia strony. Przycisk „Informacje o alarmie” na dole strony pozwala ponownie przeczytać komunikat. Obok znajduje się przycisk informacji o zapisie danych i instalacji. Nie jest to natywny budzik ani powiadomienie push.
 
-- Włączenie alarmu aktywuje dźwięk w bieżącej sesji. Przycisk **Enable and test alarm sound** pozwala sprawdzić, czy dźwięk jest słyszalny; trzeba uwzględnić głośność i wyciszenie telefonu.
+- Włączenie alarmu aktywuje dźwięk w bieżącej sesji. Przycisk **Enable and test alarm sound** pozwala sprawdzić, czy dźwięk jest słyszalny; trzeba uwzględnić głośność i wyciszenie telefonu. Podczas testowania przycisk **Stop sound test** natychmiast przerywa próbkę.
+- Dzwoneczek 🔔 w tabeli procesów i jej podsumowaniu oznacza uzbrojony alarm; znika po jego uruchomieniu lub anulowaniu.
 - Po odświeżeniu lub ponownym otwarciu strony ponownie użyj przycisku aktywacji dźwięku. Przeglądarka wymaga interakcji użytkownika; zapamiętany termin sam nie odblokowuje audio.
-- O końcu procesu informują krótkie sygnały oraz komunikat z nazwą procesu. Przycisk zamknięcia alarmu przerywa dźwięk. Sygnały kończą się również automatycznie po krótkiej sekwencji.
+- O końcu procesu informują krótkie sygnały oraz komunikat z nazwą procesu. Przycisk zamknięcia alarmu przerywa dźwięk. Właściwy alarm powtarza sygnały do ręcznego wyłączenia; test dźwięku kończy się automatycznie po krótkiej sekwencji. Przy przejściu w tło dźwięk jest przerywany, a po powrocie aktywny alarm wznawia dzwonienie.
 - Alarm jest jednorazowy. Zmiana początku lub końca procesu anuluje alarm — po edycji włącz go ponownie. Usunięcie procesu również go anuluje.
 - Jeśli aplikacja była nieaktywna, dźwięk nie był odblokowany albo strona wznowiła się po przerwie, pokazuje informację o miniętym terminie i nie odtwarza zaległego dźwięku.
 - Zgoda na zapis pozwala zapamiętać termin i stan alarmu. Wyłączenie zapisu oraz reset danych usuwa alarmy. Obsługa alarmów nie wysyła danych na serwer i nie wymaga uprawnień do powiadomień.
 
 ### Karuzela na telefonie
 
-Dwie karty przedstawiają ten sam zestaw danych: tarczę oraz podsumowanie. Przełączanie kart nie zmienia procesów ani ich widoczności.
+Dwie karty przedstawiają ten sam zestaw danych: tarczę oraz podsumowanie. Przyciski „Zegarek ↔ Procesy” znajdują się nad karuzelą, aby były widoczne również przy długiej tabeli. Karuzela działa na wąskich ekranach i urządzeniach dotykowych, także po obróceniu telefonu. Przełączanie kart nie zmienia procesów ani ich widoczności.
 
 <img src="docs/screenshots/countdown-mobile-clock.png" width="300" alt="Countdown to na telefonie — karta zegarka, interfejs EN"> <img src="docs/screenshots/countdown-mobile-processes.png" width="300" alt="Countdown to na telefonie — karta podsumowania procesów, interfejs EN">
 
