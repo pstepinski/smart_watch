@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080e14" />
+  <title>HORIZON — zegar hybrydowy</title>
+  <style>
+    :root { color-scheme: dark; --bg: #080e14; --ice: #b7f4e6; --accent: #5ae6c6; --white: #f1f9ff; --muted: #6f8293; }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--white);
+      background: radial-gradient(ellipse 55% 55% at 50% 47%, #1a3440 0%, #0e1923 50%, var(--bg) 100%);
+      overflow-x: hidden;
+    }
+    .stage { position: relative; width: min(100%, 800px); padding: 34px 18px 28px; text-align: center; isolation: isolate; }
+    .stage::before { content: ""; position: absolute; z-index: -1; width: 70%; aspect-ratio: 1; left: 15%; top: 12%; border-radius: 50%; background: #1b7a6c; opacity: .15; filter: blur(85px); pointer-events: none; }
+    .eyebrow { font-size: 10px; letter-spacing: .39em; font-weight: 700; color: var(--accent); margin-bottom: 7px; }
+    h1 { font-size: clamp(21px, 4vw, 31px); font-weight: 650; letter-spacing: .28em; margin: 0 0 4px .28em; }
+    .subtitle { color: #77919e; font-size: 10px; letter-spacing: .29em; text-transform: uppercase; }
+    .watch-shell { position: relative; width: min(76vw, 428px); aspect-ratio: 1; margin: 26px auto 19px; padding: 11px; border-radius: 50%; background: conic-gradient(from 220deg, #0b141c, #527078, #111e29, #91b7b7, #142632, #475d66, #0b141c); box-shadow: 0 0 0 1px #263d4b, 0 22px 55px #0009, 0 0 80px #36cda52a, inset 0 0 10px #c7f9ee55; }
+    .bezel { height: 100%; width: 100%; padding: 8px; border-radius: 50%; background: repeating-conic-gradient(from 0deg, #22303a 0deg 1deg, #101b23 1deg 3deg); box-shadow: inset 0 0 0 2px #111e25, inset 0 0 22px #02090c; }
+    .dial { position: relative; width: 100%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 42% 29%, #233c49 0%, #12212d 38%, #07131d 75%, #050c12 100%); border: 1px solid #55707c; box-shadow: inset 0 0 0 4px #07141d, inset 0 0 0 5px #253f49, inset 0 10px 25px #000b; }
+    .dial::before { content: ""; position: absolute; inset: 12%; border: 1px solid #819fa021; border-radius: 50%; }
+    .dial::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; background: linear-gradient(135deg, #e8fff111, transparent 30%, transparent 72%, #0005); }
+    .tick { position: absolute; inset: 0; transform: rotate(var(--rot)); pointer-events: none; }
+    .tick::before { content: ""; position: absolute; top: 5.8%; left: calc(50% - .75px); width: 1.5px; height: 6px; border-radius: 2px; background: #536b78; }
+    .tick.major::before { top: 5%; left: calc(50% - 1.2px); width: 2.4px; height: 15px; background: #b9dbdb; box-shadow: 0 0 8px #9df0dc50; }
+    .numeral { position: absolute; z-index: 2; font-size: clamp(11px, 2.4vw, 15px); font-weight: 650; letter-spacing: .07em; color: #e5f7f4; text-shadow: 0 1px 9px #8af6e05a; transform: translate(-50%, -50%); }
+    .n12 { top: 16%; left: 50%; } .n3 { top: 50%; left: 84%; } .n6 { top: 84%; left: 50%; } .n9 { top: 50%; left: 16%; }
+    .mark { position: absolute; z-index: 2; width: 100%; top: 29%; left: 0; font-size: clamp(7px, 1.5vw, 9px); font-weight: 750; letter-spacing: .23em; color: #91b7b8; }
+    .mark span { display: block; margin-top: 5px; font-size: clamp(6px, 1.2vw, 8px); font-weight: 500; letter-spacing: .22em; color: #4d8890; }
+    .hand { position: absolute; z-index: 5; left: 50%; bottom: 50%; transform-origin: 50% 100%; border-radius: 8px 8px 2px 2px; transform: translateX(-50%) rotate(var(--angle, 0deg)); }
+    .hour { width: 8px; height: 25%; background: linear-gradient(90deg, #9dbec1, #f1ffff 52%, #7fa1a7); box-shadow: 0 2px 8px #000b; }
+    .minute { width: 5px; height: 36%; background: linear-gradient(90deg, #a5c9c9, #f4ffff 55%, #7c9da2); box-shadow: 0 2px 8px #000b; }
+    .second { z-index: 7; width: 2px; height: 39%; background: var(--accent); box-shadow: 0 0 9px #5ae6c67a; }
+    .second::after { content: ""; position: absolute; width: 2px; height: 18%; background: var(--accent); top: 96%; left: 0; }
+    .pin { position: absolute; z-index: 8; left: 50%; top: 50%; width: 16px; height: 16px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--accent); border: 4px solid #16333a; box-shadow: 0 0 0 2px #7dddc9, 0 0 12px #5ae6c66a; }
+    .digital { position: absolute; z-index: 3; left: 50%; top: 58%; transform: translateX(-50%); width: 43%; padding: 7px 6px 6px; border: 1px solid #386b71; border-radius: 8px; background: linear-gradient(180deg, #020b11 0%, #0c2329 100%); box-shadow: inset 0 1px 10px #000a, 0 1px 0 #7ff6db17, 0 0 22px #29bfaa17; }
+    .digital-label { font-size: clamp(5px, 1.15vw, 7px); font-weight: 750; letter-spacing: .25em; color: #4f9d99; margin-bottom: 2px; }
+    .digital-time { font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: clamp(13px, 3.6vw, 22px); font-weight: 700; letter-spacing: .025em; color: var(--ice); text-shadow: 0 0 12px #79f5d667; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .footer { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 10px; letter-spacing: .18em; color: #8397a0; text-transform: uppercase; }
+    .live-dot { display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: #6dedc9; box-shadow: 0 0 10px #6dedc9a6; vertical-align: 1px; }
+    .footer-sep { width: 1px; height: 12px; background: #39505a; }
+    @media (max-width: 480px) { .stage { padding: 20px 8px; } .watch-shell { width: min(92vw, 428px); margin-top: 23px; padding: 8px; } .bezel { padding: 6px; } .digital { top: 58%; padding: 6px 4px; } .mark { top: 28%; } .footer { font-size: 9px; gap: 8px; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
+  </style>
+</head>
+<body>
+  <main class="stage" aria-label="Hybrydowy zegar analogowo-cyfrowy">
+    <div class="eyebrow">PRECISION TIMEKEEPING</div>
+    <h1>HORIZON</h1>
+    <div class="subtitle">Analog × Digital · Edition 01</div>
+
+    <div class="watch-shell">
+      <div class="bezel">
+        <div class="dial" id="dial" role="img" aria-label="Tarcza zegara z aktualną godziną">
+          <div class="numeral n12">12</div><div class="numeral n3">3</div><div class="numeral n6">6</div><div class="numeral n9">9</div>
+          <div class="mark">HORIZON<span>DUAL TIME DISPLAY</span></div>
+          <div class="digital"><div id="digitalDate" class="digital-label">06.11.2026</div><div id="digitalTime" class="digital-time">--:--:--</div></div>
+          <div class="hand hour" id="hourHand"></div><div class="hand minute" id="minuteHand"></div><div class="hand second" id="secondHand"></div><div class="pin"></div>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span><span class="live-dot"></span>LIVE CLOCK</span><span class="footer-sep"></span><span id="dateLabel">--</span></div>
+  </main>
+  <script>
+    (() => {
+      const dial = document.getElementById('dial');
+      const hour = document.getElementById('hourHand');
+      const minute = document.getElementById('minuteHand');
+      const second = document.getElementById('secondHand');
+      const digital = document.getElementById('digitalTime');
+      const digitalDate = document.getElementById('digitalDate');
+      const date = document.getElementById('dateLabel');
+      for (let i = 0; i < 60; i++) {
+        const tick = document.createElement('div');
+        tick.className = 'tick' + (i % 5 === 0 ? ' major' : '');
+        tick.style.setProperty('--rot', `${i * 6}deg`);
+        dial.insertBefore(tick, dial.firstChild);
+      }
+      const pad = n => String(n).padStart(2, '0');
+      function refresh() {
+        const now = new Date();
+        const s = now.getSeconds() + now.getMilliseconds() / 1000;
+        const m = now.getMinutes() + s / 60;
+        const h = (now.getHours() % 12) + m / 60;
+        hour.style.setProperty('--angle', `${h * 30}deg`);
+        minute.style.setProperty('--angle', `${m * 6}deg`);
+        second.style.setProperty('--angle', `${s * 6}deg`);
+        digital.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        digitalDate.textContent = `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`;
+        date.textContent = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long', weekday: 'long' }).format(now);
+        dial.setAttribute('aria-label', `Zegar wskazuje ${pad(now.getHours())}:${pad(now.getMinutes())}`);
+      }
+      refresh();
+      setInterval(refresh, 50);
+    })();
+  </script>
+</body>
+</html>
