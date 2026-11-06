@@ -1,6 +1,7 @@
 export type Mode = 'clock' | 'countdown' | 'stopwatch' | 'timer';
 export type UnitSelection = boolean[];
 export interface Process {
+  automaticStart?: number;
   id: number;
   name: string;
   color: string;

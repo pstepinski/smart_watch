@@ -59,3 +59,36 @@ test('nieprawidłowy schemat, zduplikowane identyfikatory i blokada zapisu nie p
   assert.match(loadState(blocked).error, /odczytać/);
   assert.match(saveState(blocked, state), /zapisać/);
 });
+
+test('sama godzina końca liczy od zapisanego momentu i maleje z upływem czasu', () => {
+  const process = createState().processes[0];
+  process.startTime = '';
+  process.automaticStart = +new Date(2026, 0, 1, 12);
+  const timing = processTiming(process, new Date(2026, 0, 1, 14));
+  assert.equal(timing.error, '');
+  assert.equal(timing.progress, .5);
+  assert.equal(+timing.start, process.automaticStart);
+  assert.equal(processTiming(process, new Date(2026, 0, 1, 16)).progress, 1);
+  assert.equal(processTiming(process, new Date(2026, 0, 2, 10)).progress, 1);
+});
+test('cel miniony dzisiaj oznacza jutro, a cel z datą nie wymaga daty początku', () => {
+  const process = createState().processes[0];
+  process.startTime = ''; process.endTime = '06:00';
+  process.automaticStart = +new Date(2026, 0, 1, 22);
+  const timing = processTiming(process, new Date(2026, 0, 2, 2));
+  assert.equal(timing.error, '');
+  assert.equal(timing.end.getDate(), 2);
+  assert.equal(timing.progress, .5);
+  process.endDate = '2026-01-03';
+  assert.equal(processTiming(process, new Date(2026, 0, 2)).error, '');
+  process.endDate = '2025-12-31';
+  assert.match(processTiming(process, new Date(2026, 0, 2)).error, /po początku/);
+});
+test('automatyczny początek przechodzi walidację zapisu, błędny znacznik jest odrzucany', () => {
+  const state = createState();
+  state.processes[0].startTime = '';
+  state.processes[0].automaticStart = Date.now();
+  assert.equal(isAppState(state), true);
+  state.processes[0].automaticStart = -1;
+  assert.equal(isAppState(state), false);
+});

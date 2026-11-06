@@ -159,3 +159,26 @@ test('uszkodzony zapis pokazuje komunikat i pozwala dalej korzystać z aplikacji
   await expect(page.locator('#countdownPanel tbody tr')).toHaveCount(2);
   await expect(page.getByRole('status')).toContainText('Dane są zapisywane');
 });
+
+test('sama godzina celu zapisuje bieżący początek i zachowuje odliczanie po restarcie', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-01-01T12:00:00'));
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Odliczanie do', exact: true }).click();
+  await page.getByLabel('Godzina końca: Pasek 1', { exact: true }).fill('13:00');
+  await page.getByLabel('Godzina początku: Pasek 1', { exact: true }).fill('');
+  await expect(page.locator('#countdownPanel .range-status')).toContainText('Pozostało 01:00:00');
+  const origin = (await saved(page)).processes[0].automaticStart;
+  await page.clock.setFixedTime(new Date('2026-01-01T12:30:00'));
+  await expect(page.locator('.countdown-ring circle')).toHaveCSS('stroke-dasharray', '50px, 100px');
+  await page.getByLabel('Nazwa procesu 1', { exact: true }).fill('Cel');
+  expect((await saved(page)).processes[0].automaticStart).toBe(origin);
+  await page.reload();
+  await expect(page.locator('#countdownPanel .range-status')).toContainText('Pozostało 00:30:00');
+  expect((await saved(page)).processes[0].automaticStart).toBe(origin);
+  await page.getByLabel('Widok odliczania').selectOption('single');
+  await page.getByLabel('Zestaw jednostek: Odliczanie do').selectOption('clock');
+  await expect(page.locator('#digitalTime')).toHaveText('00:30:00');
+  await page.clock.setFixedTime(new Date('2026-01-02T12:30:00'));
+  await expect(page.locator('#digitalTime')).toHaveText('00:00:00');
+  await expect(page.locator('#countdownPanel .range-status')).toContainText('Zakończono');
+});

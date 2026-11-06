@@ -131,6 +131,11 @@ export class AppComponent implements OnDestroy {
     this.state.activeProcessId ??= id;
     this.changed();
   }
+  processTimeChanged(entry: Process): void {
+    if (!entry.startDate && !entry.startTime) entry.automaticStart = Date.now();
+    else delete entry.automaticStart;
+    this.changed();
+  }
   removeProcess(entry: Process): void {
     this.state.processes = this.state.processes.filter(item => item.id !== entry.id);
     if (this.state.activeProcessId === entry.id) this.state.activeProcessId = this.state.processes[0]?.id ?? null;

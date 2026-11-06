@@ -10,6 +10,9 @@ export class StateService {
     try {
       const loaded = loadState(localStorage);
       this.state = loaded.state;
+      for (const process of this.state.processes) {
+        if (!process.startDate && !process.startTime && process.automaticStart === undefined) process.automaticStart = Date.now();
+      }
       this.error.set(loaded.error || saveState(localStorage, this.state));
     } catch {
       this.state = createState();

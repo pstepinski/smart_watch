@@ -1,0 +1,9 @@
+name: horizon-watch
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${HORIZON_PORT:-8080}:80"
+    restart: unless-stopped

@@ -45,12 +45,14 @@ export function formatSelectedTime(start: Date, end: Date, selected: UnitSelecti
 export interface ProcessTiming { start: Date; end: Date; error: string; progress: number; }
 export function processTiming(process: Process, now: Date): ProcessTiming {
   let error = '';
-  if (!process.startTime || !process.endTime) error = 'Podaj godzinę początku i końca.';
-  if (Boolean(process.startDate) !== Boolean(process.endDate)) error = 'Podaj obie daty lub pozostaw obie puste.';
-  const today = localDate(now);
-  const start = new Date(`${process.startDate || today}T${process.startTime}`);
-  const end = new Date(`${process.endDate || today}T${process.endTime}`);
-  if (!process.startDate && end < start) end.setDate(end.getDate() + 1);
+  const automatic = !process.startTime && !process.startDate;
+  const origin = new Date(process.automaticStart ?? +now);
+  if (!process.endTime) error = 'Podaj godzinę końca.';
+  if (process.startDate && !process.startTime) error = 'Podaj godzinę początku lub pozostaw cały początek pusty.';
+  if (process.startDate && !process.endDate) error = 'Podaj obie daty lub pozostaw datę początku pustą.';
+  const start = automatic ? origin : new Date(`${process.startDate || localDate(now)}T${process.startTime}`);
+  const end = new Date(`${process.endDate || localDate(automatic ? origin : now)}T${process.endTime}`);
+  if (!process.endDate && (end < start || (automatic && +end === +start))) end.setDate(end.getDate() + 1);
   if (!error && (!Number.isFinite(+start) || !Number.isFinite(+end) || end <= start)) error = 'Koniec musi przypadać po początku.';
   return { start, end, error, progress: error ? 0 : Math.max(0, Math.min(1, (+now - +start) / (+end - +start))) };
 }

@@ -13,6 +13,41 @@ npm start
 
 Aplikacja deweloperska: `http://localhost:4200`. Service worker jest wyłączony w trybie deweloperskim, żeby aktualizacje kodu były od razu widoczne.
 
+## Docker Compose
+
+Wymagany Docker z działającym `docker compose` (obsługującym `up --wait`). Node.js na komputerze nie jest potrzebny — aplikacja buduje się wewnątrz obrazu, a gotowe pliki serwuje Nginx.
+
+```bash
+./scripts/start.sh
+```
+
+Adres: `http://localhost:8080`. Skrypt buduje aktualny kod, uruchamia kontener w tle i czeka na pozytywny healthcheck. Można uruchomić go z dowolnego katalogu.
+
+Zatrzymanie aplikacji:
+
+```bash
+./scripts/stop.sh
+```
+
+Zmiana portu (użyj tej samej wartości także przy zatrzymywaniu):
+
+```bash
+HORIZON_PORT=8090 ./scripts/start.sh
+HORIZON_PORT=8090 ./scripts/stop.sh
+```
+
+Odpowiedniki bez skryptów, uruchamiane w katalogu projektu:
+
+```bash
+docker compose up -d --build --wait
+docker compose logs -f web
+docker compose down
+```
+
+Kontener jest automatycznie uruchamiany po restarcie Dockera, dopóki nie zostanie zatrzymany. Dane aplikacji pozostają w przeglądarce; nie wymagają wolumenu Docker i nie są usuwane przez `stop.sh`. Zachowaj ten sam adres i port, aby korzystać z tego samego zapisu.
+
+Do PWA na telefonie potrzebny jest adres HTTPS, np. przez reverse proxy przed kontenerem. Zwykłe HTTP pod adresem IP komputera pozwala otworzyć stronę, ale nie zapewnia obsługi PWA jak HTTPS lub `localhost`.
+
 ## PWA i działanie offline
 
 ```bash
@@ -25,6 +60,8 @@ Wersja produkcyjna: `http://localhost:4173`. Po pierwszym otwarciu i pobraniu za
 Do hostowania należy udostępnić zawartość `dist/horizon/browser` przez **HTTPS**. `localhost` również pozwala testować PWA. Zachowaj ten sam adres aplikacji: dane przeglądarki są przypisane do konkretnego protokołu, hosta i portu. Sam plik HTML otwarty przez `file://` nie uruchamia aplikacji Angular ani PWA.
 
 Manifest, ikony (w tym maskable) i konfiguracja Angular Service Worker znajdują się w `public/` oraz `ngsw-config.json`. Gdy service worker pobierze aktualizację, aplikacja pokazuje przycisk odświeżenia.
+
+W „Odliczaniu do” można pozostawić datę i godzinę początku puste oraz podać samą godzinę końca. Początek jest wtedy zapisywany jako moment ustawienia zakresu i zachowuje się po restarcie. Jeśli godzina końca już minęła, wybierany jest następny dzień. Można też podać konkretną datę końca.
 
 ## Dane na urządzeniu
 

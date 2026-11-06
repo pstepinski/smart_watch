@@ -18,7 +18,7 @@ export function isAppState(value: unknown): value is AppState {
   const processes = value['processes'];
   if (!Array.isArray(processes) || !processes.every(item => record(item) && natural(item['id']) &&
     strings(item, ['name', 'color', 'startDate', 'endDate', 'startTime', 'endTime']) &&
-    PALETTE.some(color => color.color === item['color']) && typeof item['visible'] === 'boolean') || !uniqueIds(processes)) return false;
+    (item['automaticStart'] === undefined || amount(item['automaticStart'])) && PALETTE.some(color => color.color === item['color']) && typeof item['visible'] === 'boolean') || !uniqueIds(processes)) return false;
   const countFrom = value['countFrom'];
   if (!Array.isArray(countFrom) || !countFrom.every(item => record(item) && natural(item['id']) &&
     strings(item, ['name', 'startDate', 'startTime']) && selection(item['units'])) || !uniqueIds(countFrom)) return false;
