@@ -97,7 +97,7 @@ export class AppComponent implements OnDestroy {
     const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
     const minutes = now.getMinutes() + seconds / 60;
     return {
-      processes, countFrom, rings, digitalTime, digitalLabel, compact, timerElapsed,
+      processes, countFrom, rings, digitalTime, digitalLabel, compact, timerElapsed, currentTime: localTime(now),
       secondAngle: `${seconds * 6}deg`, minuteAngle: `${minutes * 6}deg`, hourAngle: `${((now.getHours() % 12) + minutes / 60) * 30}deg`,
       dateLabel: new Intl.DateTimeFormat(language === 'en' ? 'en-GB' : 'pl-PL', { day: 'numeric', month: 'long', weekday: 'long' }).format(now)
     };

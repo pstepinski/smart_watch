@@ -12,4 +12,4 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 
 docker compose --project-directory "$project_dir" -f "$project_dir/compose.yaml" up --detach --build --wait --wait-timeout 60 "$@"
-echo "Aplikacja działa. Domyślny adres: http://localhost:8080 (port można zmienić przez HORIZON_PORT)."
+echo "Aplikacja działa. Domyślny adres: http://localhost:4173 (port można zmienić przez HORIZON_PORT)."

@@ -18,6 +18,6 @@ export class I18nService {
   }
   private updateDocument(): void {
     document.documentElement.lang = this.language();
-    document.title = this.language() === 'en' ? 'HORIZON — hybrid clock' : 'HORIZON — zegar hybrydowy';
+    document.title = this.language() === 'en' ? 'SMART WATCH — hybrid clock' : 'SMART WATCH — zegar hybrydowy';
   }
 }

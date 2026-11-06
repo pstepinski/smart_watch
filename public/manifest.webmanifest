@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "HORIZON — zegar i odliczanie",
-  "short_name": "HORIZON",
+  "name": "SMART WATCH — zegar i odliczanie",
+  "short_name": "SMART WATCH",
   "description": "Zegarek, odliczanie do i od oraz stoper z okrążeniami. Działa offline.",
   "lang": "pl",
   "start_url": "./",

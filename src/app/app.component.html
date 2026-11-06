@@ -1,7 +1,7 @@
 @let vm = view();
 <main class="stage" [attr.aria-label]="t('Hybrydowy zegar analogowo-cyfrowy')">
-  <div class="eyebrow">PRECISION TIMEKEEPING</div>
-  <h1>HORIZON</h1>
+  <h1>SMART WATCH</h1>
+  <div class="signature">by Piotr Stępiński</div>
   <div class="language-picker"><label>{{ t('Język interfejsu') }}
     <select id="languageSelect" [ngModel]="i18n.language()" (ngModelChange)="i18n.setLanguage($event)" [attr.aria-label]="t('Język interfejsu')">
       <option value="pl">PL</option><option value="en">EN</option>
@@ -27,7 +27,7 @@
     </div>
     <div class="hand hour" [style.--angle]="vm.hourAngle"></div><div class="hand minute" [style.--angle]="vm.minuteAngle"></div><div class="hand second" [style.--angle]="vm.secondAngle"></div><div class="pin"></div>
   </div></div></div>
-  <div class="footer"><span>{{ vm.dateLabel }}</span></div>
+  <div class="footer"><span>{{ vm.dateLabel }}</span><span class="footer-sep" aria-hidden="true"></span><time>{{ vm.currentTime }}</time></div>
   <div class="range-form"><label class="display-toggle" style="margin: 0"><input type="checkbox" role="switch" aria-controls="digitalDisplay" [(ngModel)]="state.showDigital" (ngModelChange)="changed()">{{ t('Pokaż wyświetlacz cyfrowy') }}</label></div>
   <p class="storage-status" [class.error]="storage.error()" role="status">{{ t(storage.error() || 'Dane są zapisywane na tym urządzeniu.') }}</p>
   @if (installPrompt() || updateReady()) {

@@ -1,4 +1,6 @@
-# HORIZON
+# SMART WATCH
+
+by Piotr Stępiński
 
 Aplikacja Angular PWA: zegarek analogowo-cyfrowy, odliczanie do wybranego momentu, odliczanie od wybranego momentu i stoper z pauzą oraz okrążeniami. Interfejs obsługuje język polski i angielski oraz działa na telefonie. Przy pierwszym uruchomieniu wybierany jest język przeglądarki: polski dla `pl`, angielski dla pozostałych języków. Wybór PL/EN nad zakładkami jest zapamiętywany na urządzeniu i ma pierwszeństwo przed językiem przeglądarki. Starsze dane bez zapisanego języka również korzystają z języka przeglądarki.
 
@@ -21,7 +23,7 @@ Wymagany Docker z działającym `docker compose` (obsługującym `up --wait`). N
 ./scripts/start.sh
 ```
 
-Adres: `http://localhost:8080`. Skrypt buduje aktualny kod, uruchamia kontener w tle i czeka na pozytywny healthcheck. Można uruchomić go z dowolnego katalogu.
+Adres: `http://localhost:4173`. Skrypt buduje aktualny kod, uruchamia kontener w tle i czeka na pozytywny healthcheck. Można uruchomić go z dowolnego katalogu.
 
 Zatrzymanie aplikacji:
 
