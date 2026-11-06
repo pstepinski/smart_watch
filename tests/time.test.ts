@@ -165,3 +165,17 @@ test('migracja dodaje zegary bez utraty stanu, pusty zestaw i własne miasta poz
   assert.equal(isAppState(state), true);
   state.worldClocks[0].timeZone = 'Bad/Zone'; assert.equal(isAppState(state), false);
 });
+
+test('stan alarmu jest opcjonalny, walidowany i zachowywany w zapisie', () => {
+  const state = createState();
+  assert.equal(isAppState(state), true);
+  const process = state.processes[0];
+  process.alarmEnabled = true;
+  assert.equal(isAppState(state), false);
+  process.alarmAt = Date.now() + 60000;
+  assert.equal(isAppState(state), true);
+  const store = { getItem: () => JSON.stringify(state), setItem: () => {} };
+  assert.equal(loadState(store).state.processes[0].alarmAt, process.alarmAt);
+  process.alarmAt = -1;
+  assert.equal(isAppState(state), false);
+});

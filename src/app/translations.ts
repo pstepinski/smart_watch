@@ -1,6 +1,19 @@
 export type Language = 'pl' | 'en';
 
 const english: Record<string, string> = {
+  "Alarm": "Alarm",
+  "Alarm: ": "Alarm: ",
+  "Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie.": "The alarm only works while the app is open and active, with the screen on.",
+  "Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle. Sprawdź głośność i tryb wyciszenia telefonu. Po odświeżeniu strony ponownie włącz dźwięk przyciskiem poniżej. Alarm jest jednorazowy; po zmianie terminu włącz go ponownie.": "It does not work when your phone is locked, the screen is off, the app is closed or running in the background. Check your phone's volume and silent mode. After refreshing, enable sound again using the button below. Alarms are one-time; re-enable after changing the end time.",
+  "Włącz i przetestuj dźwięk alarmów": "Enable and test alarm sound",
+  "Dźwięk jest włączony w tej sesji.": "Sound is enabled for this session.",
+  "Dźwięk wymaga włączenia w tej sesji.": "Sound must be enabled for this session.",
+  "Czas upłynął!": "Time is up!",
+  "Zamknij alarm i wyłącz dźwięk": "Dismiss alarm and stop sound",
+  "Termin alarmu minął.": "The alarm time has passed.",
+  "Termin minął, gdy alarm nie mógł zadziałać. Pozostaw aplikację aktywną z włączonym ekranem i dźwiękiem.": "The deadline passed while the alarm could not run. Keep the app active with the screen on and sound enabled.",
+  "Nie udało się włączyć dźwięku. Spróbuj ponownie i sprawdź ustawienia przeglądarki.": "Sound could not be enabled. Try again and check your browser settings.",
+  "Aby włączyć alarm, podaj prawidłowy termin końca w przyszłości.": "To enable an alarm, enter a valid future end time.",
   "Język komunikatu": "Popup language",
   "Zamknij": "Close",
   "Informacje o zapisie i instalacji": "Storage and installation information",

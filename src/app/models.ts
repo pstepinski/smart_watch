@@ -4,6 +4,9 @@ export type Mode = 'clock' | 'countdown' | 'stopwatch' | 'timer' | 'world';
 export type UnitSelection = boolean[];
 export interface Process {
   automaticStart?: number;
+  alarmEnabled?: boolean;
+  alarmAt?: number;
+  alarmFiredAt?: number;
   id: number;
   name: string;
   color: string;

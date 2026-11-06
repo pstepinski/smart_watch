@@ -158,6 +158,19 @@ Widoczność sekund, minut, godzin, dni, tygodni, miesięcy i lat ustala się pr
 
 ![Countdown to — wybrany proces i osobne pierścienie jednostek](docs/screenshots/countdown-single.png)
 
+### Alarm końca procesu
+
+Każdy proces ma opcję **Alarm**. Włączenie ustawia jednorazowy alarm na wyliczoną datę i godzinę końca, również gdy wpisano tylko godzinę celu. Cel musi być prawidłowy i przyszły. Ukrycie procesu na tarczy nie wyłącza jego alarmu.
+
+**Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie. Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle — także w zainstalowanej PWA.** Ta informacja jest widoczna obok ustawień alarmu w PL i EN. Nie jest to natywny budzik ani powiadomienie push.
+
+- Włączenie alarmu aktywuje dźwięk w bieżącej sesji. Przycisk **Enable and test alarm sound** pozwala sprawdzić, czy dźwięk jest słyszalny; trzeba uwzględnić głośność i wyciszenie telefonu.
+- Po odświeżeniu lub ponownym otwarciu strony ponownie użyj przycisku aktywacji dźwięku. Przeglądarka wymaga interakcji użytkownika; zapamiętany termin sam nie odblokowuje audio.
+- O końcu procesu informują krótkie sygnały oraz komunikat z nazwą procesu. Przycisk zamknięcia alarmu przerywa dźwięk. Sygnały kończą się również automatycznie po krótkiej sekwencji.
+- Alarm jest jednorazowy. Zmiana początku lub końca procesu anuluje alarm — po edycji włącz go ponownie. Usunięcie procesu również go anuluje.
+- Jeśli aplikacja była nieaktywna, dźwięk nie był odblokowany albo strona wznowiła się po przerwie, pokazuje informację o miniętym terminie i nie odtwarza zaległego dźwięku.
+- Zgoda na zapis pozwala zapamiętać termin i stan alarmu. Wyłączenie zapisu oraz reset danych usuwa alarmy. Obsługa alarmów nie wysyła danych na serwer i nie wymaga uprawnień do powiadomień.
+
 ### Karuzela na telefonie
 
 Dwie karty przedstawiają ten sam zestaw danych: tarczę oraz podsumowanie. Przełączanie kart nie zmienia procesów ani ich widoczności.
@@ -401,6 +414,7 @@ Zestaw obejmuje popup zgody, wszystkie pięć zakładek, oba widoki „Odliczani
 | `src/app/world-clocks.ts` | Katalog miast, zestaw domyślny i obliczenia czasu w strefach. |
 | `src/app/models.ts` | Model stanu i wartości domyślne. |
 | `src/app/time.ts` | Obliczenia i formatowanie czasu. |
+| `src/app/alarm.service.ts` | Jednorazowe alarmy w aktywnej aplikacji, Web Audio i obsługa miniętych terminów. |
 | `src/app/state.service.ts`, `src/app/persistence.ts`, `src/app/storage-consent.ts` | Zgoda, włączanie i wyłączanie zapisu, usuwanie danych/cache, walidacja i migracja. |
 | `src/app/i18n.service.ts`, `src/app/translations.ts` | PL/EN, wykrywanie języka i słownik. |
 | `src/styles.css` | Wygląd, responsywność i karuzela. |

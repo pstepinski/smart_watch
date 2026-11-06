@@ -41,6 +41,14 @@
       } @else { <button type="button" (click)="closeStorageInfo()">{{ t('Zamknij') }}</button> }
       </div>
   </dialog>
+  @if (alarms.notices().length) {
+    <aside class="alarm-notices range-form" role="alert">
+      @for (notice of alarms.notices(); track notice.id) {
+        <p><strong>{{ notice.name }}</strong>: {{ t(notice.missed ? 'Termin minął, gdy alarm nie mógł zadziałać. Pozostaw aplikację aktywną z włączonym ekranem i dźwiękiem.' : 'Czas upłynął!') }}</p>
+      }
+      <button type="button" (click)="alarms.dismiss()">{{ t('Zamknij alarm i wyłącz dźwięk') }}</button>
+    </aside>
+  }
   <div class="tabs" role="tablist" [attr.aria-label]="t('Tryb zegara')">
     @for (tab of tabs; track tab.id; let i = $index) {
       <button type="button" [id]="tab.id + 'Tab'" role="tab" [attr.aria-selected]="state.mode === tab.id" [attr.aria-controls]="tab.id + 'Panel'"
@@ -122,6 +130,13 @@
   <section id="clockPanel" role="tabpanel" aria-labelledby="clockTab" [hidden]="state.mode !== 'clock'"><p class="range-help">{{ t('Aktualna data i godzina.') }}</p></section>
   <section id="countdownPanel" role="tabpanel" aria-labelledby="countdownTab" [hidden]="state.mode !== 'countdown'">
     <div class="range-form">
+      <div class="alarm-help">
+        <strong>{{ t('Alarm działa tylko przy otwartej, aktywnej aplikacji i włączonym ekranie.') }}</strong>
+        <p>{{ t('Nie działa po zablokowaniu telefonu, wygaszeniu ekranu, zamknięciu aplikacji ani w tle. Sprawdź głośność i tryb wyciszenia telefonu. Po odświeżeniu strony ponownie włącz dźwięk przyciskiem poniżej. Alarm jest jednorazowy; po zmianie terminu włącz go ponownie.') }}</p>
+        <button type="button" (click)="alarms.testSound()" [disabled]="alarms.preparing()">{{ t('Włącz i przetestuj dźwięk alarmów') }}</button>
+        <span class="alarm-audio-status">{{ t(alarms.ready() ? 'Dźwięk jest włączony w tej sesji.' : 'Dźwięk wymaga włączenia w tej sesji.') }}</span>
+        @if (alarms.error()) { <p class="range-status error" role="alert">{{ t(alarms.error()) }}</p> }
+      </div>
       <label>{{ t('Widok odliczania') }}<select [(ngModel)]="state.countdownMode" (ngModelChange)="changed()"><option value="all">{{ t('Wszystkie procesy — jeden pasek na proces') }}</option><option value="single">{{ t('Wybrany proces — pasek na jednostkę czasu') }}</option></select></label>
       @if (state.countdownMode === 'single') {
         <app-unit-picker [selection]="state.countdownUnits" (selectionChange)="state.countdownUnits = $event; changed()" [label]="t('Odliczanie do')" />
@@ -146,7 +161,9 @@
               <td><label>{{ t('Data (opcjonalnie)') }}<input type="date" [(ngModel)]="entry.startDate" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Data początku: ') + entry.name"></label><label>{{ t('Godzina (opcjonalnie)') }}<input type="time" [(ngModel)]="entry.startTime" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Godzina początku: ') + entry.name"></label></td>
               <td><label>{{ t('Data (opcjonalnie)') }}<input type="date" [(ngModel)]="entry.endDate" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Data końca: ') + entry.name"></label><label>{{ t('Godzina') }}<input type="time" required [(ngModel)]="entry.endTime" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Godzina końca: ') + entry.name"></label></td>
               <td><p class="range-status" [class.error]="item.timing.error">{{ item.status }}</p></td>
-              <td><button type="button" (click)="removeProcess(entry)" [attr.aria-label]="t('Usuń: ') + entry.name">{{ t('Usuń') }}</button></td>
+              <td><label class="display-toggle"><input type="checkbox" [checked]="entry.alarmEnabled" [disabled]="alarms.preparing()" (change)="toggleAlarm(entry, $event)" [attr.aria-label]="t('Alarm: ') + entry.name">{{ t('Alarm') }}</label>
+                @if (entry.alarmFiredAt) { <p class="range-help">{{ t('Termin alarmu minął.') }}</p> }
+                <button type="button" (click)="removeProcess(entry)" [attr.aria-label]="t('Usuń: ') + entry.name">{{ t('Usuń') }}</button></td>
             </tr>
           }
         </tbody>

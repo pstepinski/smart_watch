@@ -2,6 +2,7 @@ import { afterRenderEffect, Component, computed, ElementRef, inject, OnDestroy, 
 import { FormsModule } from '@angular/forms';
 import { SwUpdate } from '@angular/service-worker';
 import { I18nService } from './i18n.service';
+import { AlarmService } from './alarm.service';
 import { StateService } from './state.service';
 import { WorldClocksComponent } from './world-clocks.component';
 import { UnitPickerComponent } from './unit-picker.component';
@@ -21,6 +22,7 @@ interface InstallEvent extends Event {
 })
 export class AppComponent implements OnDestroy {
   readonly storage = inject(StateService);
+  readonly alarms = inject(AlarmService);
   readonly state = this.storage.state;
   readonly i18n = inject(I18nService);
   readonly t = (text: string) => this.i18n.t(text);
@@ -33,13 +35,13 @@ export class AppComponent implements OnDestroy {
   readonly now = signal(Date.now());
   private readonly revision = signal(0);
   private monotonicStart = performance.now() - (restoredTimerElapsed(this.state.timer, Date.now()) - this.state.timer.accumulated);
-  private readonly interval = window.setInterval(() => this.now.set(Date.now()), 50);
+  private readonly interval = window.setInterval(() => { const now = Date.now(); this.alarms.check(now); this.now.set(now); }, 50);
   readonly installPrompt = signal<InstallEvent | null>(null);
   readonly updateReady = signal(false);
   readonly storageNotice = signal('');
   readonly storageDialog = viewChild.required<ElementRef<HTMLDialogElement>>('storageDialog');
   private readonly saveOnLeave = () => this.storage.save();
-  private readonly visibilityChanged = () => { if (document.hidden) this.storage.save(); else this.now.set(Date.now()); };
+  private readonly visibilityChanged = () => { if (document.hidden) { this.alarms.stopSound(); this.storage.save(); } else this.now.set(Date.now()); };
   private readonly beforeInstall = (event: Event) => { event.preventDefault(); this.installPrompt.set(event as InstallEvent); };
   private readonly installed = () => this.installPrompt.set(null);
   private readonly updates = inject(SwUpdate).versionUpdates.subscribe(event => {
@@ -152,6 +154,7 @@ export class AppComponent implements OnDestroy {
   }
   async allowStorage(): Promise<void> {
     if (await this.storage.enable()) {
+      this.alarms.dismiss();
       this.storageDialog().nativeElement.close();
       this.monotonicStart = performance.now() - (restoredTimerElapsed(this.state.timer, Date.now()) - this.state.timer.accumulated);
       this.i18n.syncLanguage();
@@ -164,6 +167,7 @@ export class AppComponent implements OnDestroy {
     if (checkbox.checked) await this.allowStorage();
     else if (window.confirm(this.t('Wyłączenie zapisu usunie zapisane ustawienia, procesy, zegary świata, historię stopera i pliki offline tej aplikacji oraz przywróci ustawienia domyślne. Czy kontynuować?'))) {
       if (await this.storage.disable()) {
+        this.alarms.dismiss();
         this.monotonicStart = performance.now();
         this.updateReady.set(false);
         this.storageNotice.set('Dane aplikacji zostały usunięte. Nowe zmiany pozostają tylko w pamięci tej karty.');
@@ -186,12 +190,29 @@ export class AppComponent implements OnDestroy {
     this.state.activeProcessId ??= id;
     this.changed();
   }
+  async toggleAlarm(entry: Process, event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    if (!input.checked) { this.alarms.cancel(entry); this.changed(); return; }
+    const timing = processTiming(entry, new Date(), this.i18n.language());
+    if (timing.error || +timing.end <= Date.now()) {
+      this.alarms.error.set('Aby włączyć alarm, podaj prawidłowy termin końca w przyszłości.');
+      input.checked = false;
+      return;
+    }
+    if (!await this.alarms.prepare()) { input.checked = false; return; }
+    entry.alarmEnabled = true;
+    entry.alarmAt = +timing.end;
+    delete entry.alarmFiredAt;
+    this.changed();
+  }
   processTimeChanged(entry: Process): void {
+    this.alarms.cancel(entry);
     if (!entry.startDate && !entry.startTime) entry.automaticStart = Date.now();
     else delete entry.automaticStart;
     this.changed();
   }
   removeProcess(entry: Process): void {
+    this.alarms.cancel(entry);
     this.state.processes = this.state.processes.filter(item => item.id !== entry.id);
     if (this.state.activeProcessId === entry.id) this.state.activeProcessId = this.state.processes[0]?.id ?? null;
     this.changed();
@@ -285,6 +306,7 @@ export class AppComponent implements OnDestroy {
   reload(): void { window.location.reload(); }
   ngOnDestroy(): void {
     window.clearInterval(this.interval);
+    this.alarms.dismiss();
     this.updates.unsubscribe();
     window.removeEventListener('pagehide', this.saveOnLeave);
     document.removeEventListener('visibilitychange', this.visibilityChanged);
