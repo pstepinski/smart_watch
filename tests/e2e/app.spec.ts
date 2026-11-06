@@ -131,6 +131,13 @@ test('dane i uruchomiony stoper przetrwają zamknięcie oraz uruchomienie przegl
 test('mobilny układ mieści tarczę, a wyświetlacz zachowuje rozmiar między trybami', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
+  for (const selector of ['.watch-shell', '.bezel', '.dial']) {
+    const box = (await page.locator(selector).boundingBox())!;
+    expect(Math.abs(box.width - box.height)).toBeLessThan(1);
+  }
+  const shell = (await page.locator('.watch-shell').boundingBox())!;
+  const dial = (await page.locator('.dial').boundingBox())!;
+  expect(Math.abs((dial.y - shell.y) - (shell.y + shell.height - dial.y - dial.height))).toBeLessThan(1);
   const initial = await page.locator('#digitalDisplay').boundingBox();
   await page.getByRole('tab', { name: 'Odliczanie od', exact: true }).click();
   const elapsed = await page.locator('#digitalDisplay').boundingBox();
