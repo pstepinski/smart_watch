@@ -33,6 +33,17 @@
     .tick.major::before { top: 5%; left: calc(50% - 1.2px); width: 2.4px; height: 15px; background: #b9dbdb; box-shadow: 0 0 8px #9df0dc50; }
     .numeral { position: absolute; z-index: 2; font-size: clamp(11px, 2.4vw, 15px); font-weight: 650; letter-spacing: .07em; color: #e5f7f4; text-shadow: 0 1px 9px #8af6e05a; transform: translate(-50%, -50%); }
     .n12 { top: 16%; left: 50%; } .n3 { top: 50%; left: 84%; } .n6 { top: 84%; left: 50%; } .n9 { top: 50%; left: 16%; }
+    .countdown-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; }
+    .countdown-ring circle { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 100 100; filter: drop-shadow(0 0 1px #5ae6c680); }
+    .range-form { max-width: 428px; margin: 24px auto 0; padding: 20px; border: 1px solid #304c58; border-radius: 16px; background: #0a1923cc; text-align: left; }
+    .range-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .range-form fieldset { min-width: 0; padding: 0; margin: 0; border: 0; }
+    .range-form legend { margin-bottom: 12px; color: var(--ice); font-weight: 650; }
+    .range-form label { display: block; font-size: 12px; color: #9bb0ba; margin-bottom: 10px; }
+    .range-form input { display: block; margin-top: 5px; width: 100%; min-width: 0; padding: 9px 6px; border: 1px solid #395762; border-radius: 7px; background: #07131d; color: var(--white); font: inherit; }
+    .range-help, .range-status { font-size: 12px; line-height: 1.6; color: #9bb0ba; }
+    .range-status { color: var(--ice); margin-bottom: 0; font-variant-numeric: tabular-nums; }
+    .range-status.error { color: #ffb4ab; }
     .mark { position: absolute; z-index: 2; width: 100%; top: 29%; left: 0; font-size: clamp(7px, 1.5vw, 9px); font-weight: 750; letter-spacing: .23em; color: #91b7b8; }
     .mark span { display: block; margin-top: 5px; font-size: clamp(6px, 1.2vw, 8px); font-weight: 500; letter-spacing: .22em; color: #4d8890; }
     .hand { position: absolute; z-index: 5; left: 50%; bottom: 50%; transform-origin: 50% 100%; border-radius: 8px 8px 2px 2px; transform: translateX(-50%) rotate(var(--angle, 0deg)); }
@@ -61,13 +72,27 @@
       <div class="bezel">
         <div class="dial" id="dial" role="img" aria-label="Tarcza zegara z aktualną godziną">
           <div class="numeral n12">12</div><div class="numeral n3">3</div><div class="numeral n6">6</div><div class="numeral n9">9</div>
-          <div class="mark">HORIZON<span>DUAL TIME DISPLAY</span></div>
+          <svg class="countdown-ring" viewBox="0 0 100 100" aria-hidden="true"><circle id="remainingRing" cx="50" cy="50" r="27" pathLength="100" /></svg>
           <div class="digital"><div id="digitalDate" class="digital-label">06.11.2026</div><div id="digitalTime" class="digital-time">--:--:--</div></div>
           <div class="hand hour" id="hourHand"></div><div class="hand minute" id="minuteHand"></div><div class="hand second" id="secondHand"></div><div class="pin"></div>
         </div>
       </div>
     </div>
     <div class="footer"><span><span class="live-dot"></span>LIVE CLOCK</span><span class="footer-sep"></span><span id="dateLabel">--</span></div>
+    <form class="range-form" id="rangeForm">
+      <div class="range-fields">
+        <fieldset><legend>Początek</legend>
+          <label>Data (opcjonalnie)<input type="date" id="startDate" /></label>
+          <label>Godzina<input type="time" id="startTime" value="08:00" required /></label>
+        </fieldset>
+        <fieldset><legend>Koniec</legend>
+          <label>Data (opcjonalnie)<input type="date" id="endDate" /></label>
+          <label>Godzina<input type="time" id="endTime" value="16:00" required /></label>
+        </fieldset>
+      </div>
+      <p class="range-help">Zmiany są stosowane automatycznie. Bez dat odliczanie dotyczy dzisiejszych godzin; wcześniejsza godzina końca oznacza następny dzień. Dla zakresu z datami podaj obie daty.</p>
+      <p class="range-status" id="rangeStatus" role="status" aria-live="polite"></p>
+    </form>
   </main>
   <script>
     (() => {
@@ -84,9 +109,43 @@
         tick.style.setProperty('--rot', `${i * 6}deg`);
         dial.insertBefore(tick, dial.firstChild);
       }
+      const form = document.getElementById('rangeForm');
+      const ring = document.getElementById('remainingRing');
+      const status = document.getElementById('rangeStatus');
+      const startDate = document.getElementById('startDate');
+      const endDate = document.getElementById('endDate');
+      const startTime = document.getElementById('startTime');
+      const endTime = document.getElementById('endTime');
+      form.addEventListener('submit', event => event.preventDefault());
+      form.addEventListener('input', () => refresh());
+      function updateCountdown(now) {
+        let error = '';
+        if (!startTime.value || !endTime.value) error = 'Podaj godzinę początku i końca.';
+        if (Boolean(startDate.value) !== Boolean(endDate.value)) error = 'Podaj obie daty lub pozostaw obie puste.';
+        const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        const start = new Date(`${startDate.value || today}T${startTime.value}`);
+        const end = new Date(`${endDate.value || today}T${endTime.value}`);
+        if (!startDate.value && end < start) end.setDate(end.getDate() + 1);
+        if (!error && (!Number.isFinite(+start) || !Number.isFinite(+end) || end <= start)) error = 'Koniec musi przypadać po początku.';
+        status.classList.toggle('error', Boolean(error));
+        if (error) {
+          ring.style.visibility = 'hidden';
+          status.textContent = error;
+          return;
+        }
+        const progress = Math.max(0, Math.min(1, (now - start) / (end - start)));
+        ring.style.strokeDasharray = `${(1 - progress) * 100} 100`;
+        ring.style.visibility = progress >= 1 ? 'hidden' : 'visible';
+        const seconds = Math.max(0, Math.ceil((end - now) / 1000));
+        const days = Math.floor(seconds / 86400);
+        const remaining = `${days ? days + ' dni ' : ''}${pad(Math.floor(seconds / 3600) % 24)}:${pad(Math.floor(seconds / 60) % 60)}:${pad(seconds % 60)}`;
+        const message = now < start ? `Oczekiwanie na początek · do końca ${remaining}` : progress >= 1 ? 'Zakończono · 100%' : `Pozostało ${remaining} · ${Math.floor(progress * 100)}%`;
+        if (status.textContent !== message) status.textContent = message;
+      }
       const pad = n => String(n).padStart(2, '0');
       function refresh() {
         const now = new Date();
+        updateCountdown(now);
         const s = now.getSeconds() + now.getMilliseconds() / 1000;
         const m = now.getMinutes() + s / 60;
         const h = (now.getHours() % 12) + m / 60;
