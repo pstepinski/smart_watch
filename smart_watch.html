@@ -37,7 +37,7 @@
     .countdown-ring circle { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 100 100; filter: drop-shadow(0 0 1px #5ae6c680); }
     .range-form { margin: 24px auto 0; padding: 18px; border: 1px solid #304c58; border-radius: 16px; background: #0a1923cc; text-align: left; }
     [hidden] { display: none !important; }
-    .tabs { display: flex; justify-content: center; gap: 8px; margin-top: 24px; }
+    .tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 24px; }
     .tabs button { padding: 10px 20px; border: 1px solid #395762; border-radius: 10px; color: var(--ice); background: #0a1923; font: inherit; cursor: pointer; }
     .tabs button[aria-selected="true"] { background: #254b50; border-color: var(--accent); }
     .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -45,6 +45,9 @@
     .unit-toggles .display-toggle { margin-bottom: 8px; }
     .active-stopwatch { background: #254b503d; }
     .range-form input[type="radio"] { width: 20px; min-width: 0; height: 20px; accent-color: var(--accent); cursor: pointer; }
+    .timer-readout { font: 700 clamp(26px, 6vw, 42px) ui-monospace, monospace; font-variant-numeric: tabular-nums; color: var(--ice); text-align: center; margin: 8px 0 20px; }
+    .timer-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 24px; }
+    .range-form button:disabled { opacity: .4; cursor: default; }
     .unit-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
     .elapsed-total { color: var(--ice); font-size: 18px; font-variant-numeric: tabular-nums; }
     .table-scroll { overflow-x: auto; }
@@ -91,14 +94,16 @@
     <div class="subtitle">Analog × Digital · Edition 01</div>
 
     <div class="tabs" role="tablist" aria-label="Tryb zegara">
-      <button type="button" id="countdownTab" role="tab" aria-selected="true" aria-controls="countdownPanel">Odliczanie</button>
-      <button type="button" id="stopwatchTab" role="tab" aria-selected="false" aria-controls="stopwatchPanel" tabindex="-1">Stoper</button>
+      <button type="button" id="clockTab" role="tab" aria-selected="true" aria-controls="clockPanel">Zegarek</button>
+      <button type="button" id="countdownTab" role="tab" aria-selected="false" aria-controls="countdownPanel" tabindex="-1">Odliczanie do</button>
+      <button type="button" id="stopwatchTab" role="tab" aria-selected="false" aria-controls="stopwatchPanel" tabindex="-1">Odliczanie od</button>
+      <button type="button" id="timerTab" role="tab" aria-selected="false" aria-controls="timerPanel" tabindex="-1">Stoper</button>
     </div>
     <div class="watch-shell">
       <div class="bezel">
         <div class="dial" id="dial" role="img" aria-label="Tarcza zegara z aktualną godziną">
           <div class="numeral n12">12</div><div class="numeral n3">3</div><div class="numeral n6">6</div><div class="numeral n9">9</div>
-          <svg class="countdown-ring" viewBox="0 0 100 100" aria-hidden="true"><g id="remainingRings"></g><g id="countdownUnitRings"></g><g id="elapsedRings" style="display: none"></g></svg>
+          <svg class="countdown-ring" viewBox="0 0 100 100" aria-hidden="true"><g id="timerRings" style="display: none"></g><g id="remainingRings"></g><g id="countdownUnitRings"></g><g id="elapsedRings" style="display: none"></g></svg>
           <div class="digital" id="digitalDisplay"><div id="digitalDate" class="digital-label">06.11.2026</div><div id="digitalTime" class="digital-time">--:--:--</div></div>
           <div class="hand hour" id="hourHand"></div><div class="hand minute" id="minuteHand"></div><div class="hand second" id="secondHand"></div><div class="pin"></div>
         </div>
@@ -106,7 +111,8 @@
     </div>
     <div class="footer"><span><span class="live-dot"></span>LIVE CLOCK</span><span class="footer-sep"></span><span id="dateLabel">--</span></div>
     <div class="range-form"><label class="display-toggle" style="margin: 0"><input type="checkbox" id="showDigital" role="switch" aria-controls="digitalDisplay" checked> Pokaż wyświetlacz cyfrowy</label></div>
-    <section id="countdownPanel" role="tabpanel" aria-labelledby="countdownTab">
+    <section id="clockPanel" role="tabpanel" aria-labelledby="clockTab"><p class="range-help">Aktualna data i godzina.</p></section>
+    <section id="countdownPanel" hidden role="tabpanel" aria-labelledby="countdownTab">
     <form class="range-form" id="rangeForm">
       <label>Widok odliczania<select id="countdownMode"><option value="all">Wszystkie procesy — jeden pasek na proces</option><option value="single">Wybrany proces — pasek na jednostkę czasu</option></select></label>
       <div id="countdownUnitControls" hidden><label>Szybki wybór<select id="countdownPreset"></select></label><div class="unit-toggles" id="countdownUnitToggles"></div><p class="range-help">Wybierz proces przyciskiem „Na zegarku” w tabeli. Pierścienie pokazują pozostały czas w kolejnych cyklach jednostek i maleją do zera. Wyświetlacz pokazuje pozostały czas w zaznaczonych jednostkach.</p></div>
@@ -124,13 +130,30 @@
     <section id="stopwatchPanel" role="tabpanel" aria-labelledby="stopwatchTab" hidden>
       <form class="range-form" id="stopwatchForm">
         <div class="table-scroll"><table class="range-table">
-          <caption>Stopery</caption>
+          <caption>Odliczanie od</caption>
           <thead><tr><th scope="col">Na zegarku</th><th scope="col">Nazwa</th><th scope="col">Początek</th><th scope="col">Widoczne jednostki</th><th scope="col">Upłynęło</th><th scope="col">Akcje</th></tr></thead>
           <tbody id="stopwatchRows"></tbody>
         </table></div>
         <button type="button" id="addStopwatch">+ Dodaj stoper</button>
         <p class="range-help">Bez daty stoper liczy od podanej godziny dzisiaj; przed tą godziną oczekuje na początek. Pierścienie rosną wraz z upływem czasu i rozpoczynają kolejny obrót po pełnym cyklu: sekundy / 60, minuty / 60, godziny / 24, dni / 7, tygodnie / 52, miesiące / 12, lata / 10. Miesiące i lata liczone są kalendarzowo od wybranego momentu. Przy jednostkach widoczny jest łączny upływ czasu.</p>
       </form>
+    </section>
+    <section id="timerPanel" role="tabpanel" aria-labelledby="timerTab" hidden>
+      <div class="range-form">
+        <div class="timer-readout" id="timerReadout" aria-label="Czas stopera">00:00:00.00</div>
+        <div class="timer-actions">
+          <button type="button" id="timerStart">Start</button>
+          <button type="button" id="timerPause" disabled>Pauza</button>
+          <button type="button" id="timerStop" disabled>Stop</button>
+          <button type="button" id="timerLap" disabled>Okrążenie</button>
+        </div>
+        <div class="table-scroll"><table class="range-table">
+          <caption>Wyniki stopera</caption>
+          <thead><tr><th scope="col">Pomiar</th><th scope="col">Wynik</th><th scope="col">Czas łączny</th><th scope="col">Czas od poprzedniego wyniku</th></tr></thead>
+          <tbody id="timerResults"></tbody>
+        </table></div>
+        <p class="range-help">Pauza zatrzymuje pomiar; „Wznów” kontynuuje go bez czasu przerwy. Stop zapisuje wynik. Kolejny Start rozpoczyna nowy pomiar, zachowując wcześniejsze wyniki.</p>
+      </div>
     </section>
   </main>
   <script>
@@ -160,7 +183,84 @@
         ['Miętowy', '#5ae6c6'], ['Niebieski', '#65baff'], ['Fioletowy', '#b99aff'],
         ['Różowy', '#ff8fbc'], ['Pomarańczowy', '#ffb366'], ['Żółty', '#f4df77']
       ];
+      let activeMode = 'clock';
       let stopwatchMode = false;
+      let timerState = 'idle';
+      let timerAccumulated = 0;
+      let timerStartedAt = 0;
+      let timerLastResult = 0;
+      let timerSession = 0;
+      let timerLapNumber = 0;
+      function timerElapsed() {
+        return timerAccumulated + (timerState === 'running' ? performance.now() - timerStartedAt : 0);
+      }
+      function formatTimer(milliseconds) {
+        const ticks = Math.floor(Math.max(0, milliseconds) / 10);
+        const two = value => String(value).padStart(2, '0');
+        return `${two(Math.floor(ticks / 360000))}:${two(Math.floor(ticks / 6000) % 60)}:${two(Math.floor(ticks / 100) % 60)}.${two(ticks % 100)}`;
+      }
+      function saveTimerResult(kind) {
+        const elapsed = timerElapsed();
+        const row = document.createElement('tr');
+        [timerSession, kind, formatTimer(elapsed), formatTimer(elapsed - timerLastResult)].forEach(value => {
+          const cell = document.createElement('td');
+          cell.textContent = String(value);
+          row.appendChild(cell);
+        });
+        document.getElementById('timerResults').prepend(row);
+        timerLastResult = elapsed;
+      }
+      document.getElementById('timerStart').addEventListener('click', () => {
+        if (timerState === 'running' || timerState === 'paused') return;
+        timerSession++;
+        timerLapNumber = 0;
+        timerAccumulated = 0;
+        timerLastResult = 0;
+        timerStartedAt = performance.now();
+        timerState = 'running';
+        refresh();
+      });
+      document.getElementById('timerPause').addEventListener('click', () => {
+        if (timerState === 'running') {
+          timerAccumulated = timerElapsed();
+          timerState = 'paused';
+        } else if (timerState === 'paused') {
+          timerStartedAt = performance.now();
+          timerState = 'running';
+        }
+        refresh();
+      });
+      document.getElementById('timerStop').addEventListener('click', () => {
+        if (!['running', 'paused'].includes(timerState)) return;
+        timerAccumulated = timerElapsed();
+        timerState = 'stopped';
+        saveTimerResult('Stop');
+        refresh();
+      });
+      document.getElementById('timerLap').addEventListener('click', () => {
+        if (timerState !== 'running') return;
+        saveTimerResult(`Okrążenie ${++timerLapNumber}`);
+        refresh();
+      });
+      function renderTimer() {
+        const elapsed = timerElapsed();
+        const text = formatTimer(elapsed);
+        timerRings.style.display = activeMode === 'timer' ? '' : 'none';
+        timerUnits.forEach(({ring, cycle, duration}) => {
+          ring.style.strokeDasharray = `${(elapsed / duration % cycle) / cycle * 100} 100`;
+        });
+        document.getElementById('timerReadout').textContent = text;
+        document.getElementById('timerStart').disabled = ['running', 'paused'].includes(timerState);
+        document.getElementById('timerPause').disabled = !['running', 'paused'].includes(timerState);
+        document.getElementById('timerPause').textContent = timerState === 'paused' ? 'Wznów' : 'Pauza';
+        document.getElementById('timerStop').disabled = !['running', 'paused'].includes(timerState);
+        document.getElementById('timerLap').disabled = timerState !== 'running';
+        if (activeMode === 'timer') {
+          digital.textContent = text;
+          digital.style.setProperty('--readout-length', text.length);
+          digitalDate.textContent = timerState === 'paused' ? 'PAUZA' : 'STOPER';
+        }
+      }
       const elapsedRings = document.getElementById('elapsedRings');
       const stopwatches = [];
       let activeStopwatch = null;
@@ -184,6 +284,14 @@
         ring.style.stroke = color;
         elapsedRings.appendChild(ring);
         return {name, ring, cycle, color};
+      });
+      const timerRings = document.getElementById('timerRings');
+      const timerUnits = units.slice(0, 3).map((unit, index) => {
+        const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        for (const [key, value] of Object.entries({cx: 50, cy: 50, r: 28 - index * 3.2, pathLength: 100})) ring.setAttribute(key, value);
+        ring.style.stroke = unit.color;
+        timerRings.appendChild(ring);
+        return {ring, cycle: unit.cycle, duration: [1000, 60000, 3600000][index]};
       });
       function activateStopwatch(entry) {
         activeStopwatch = entry;
@@ -212,6 +320,7 @@
           row.querySelector('.unit-toggles').appendChild(label);
           return {...unit, toggle: label.querySelector('input'), value: label.querySelector('.unit-value')};
         });
+        entry.units.forEach((unit, index) => { unit.toggle.checked = index < 3; });
         const presetSelect = row.querySelector('[data-field="unitPreset"]');
         function syncPreset() {
           const match = unitPresets.find(([, , indexes]) => entry.units.every((unit, index) => unit.toggle.checked === indexes.includes(index)));
@@ -251,30 +360,29 @@
         if (!activeStopwatch) activateStopwatch(entry);
       }
       document.getElementById('addStopwatch').addEventListener('click', addStopwatch);
-      function selectTab(stopwatch) {
-        stopwatchMode = stopwatch;
-        digitalDisplay.classList.toggle('stopwatch-display', stopwatch);
-        document.getElementById('countdownPanel').hidden = stopwatch;
-        document.getElementById('stopwatchPanel').hidden = !stopwatch;
-        rings.style.display = stopwatch ? 'none' : '';
-        elapsedRings.style.display = stopwatch ? '' : 'none';
-        ['countdownTab', 'stopwatchTab'].forEach((id, index) => {
-          const tab = document.getElementById(id);
-          const selected = Boolean(index) === stopwatch;
+      const modes = ['clock', 'countdown', 'stopwatch', 'timer'];
+      function selectTab(mode) {
+        activeMode = mode;
+        stopwatchMode = mode === 'stopwatch';
+        elapsedRings.style.display = stopwatchMode ? '' : 'none';
+        modes.forEach(item => {
+          const selected = item === mode;
+          document.getElementById(`${item}Panel`).hidden = !selected;
+          const tab = document.getElementById(`${item}Tab`);
           tab.setAttribute('aria-selected', String(selected));
           tab.tabIndex = selected ? 0 : -1;
         });
         refresh();
       }
-      ['countdownTab', 'stopwatchTab'].forEach((id, index) => {
-        const tab = document.getElementById(id);
-        tab.addEventListener('click', () => selectTab(Boolean(index)));
+      modes.forEach((mode, index) => {
+        const tab = document.getElementById(`${mode}Tab`);
+        tab.addEventListener('click', () => selectTab(mode));
         tab.addEventListener('keydown', event => {
           if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
           event.preventDefault();
-          const next = event.key === 'Home' ? false : event.key === 'End' ? true : !Boolean(index);
-          selectTab(next);
-          document.getElementById(next ? 'stopwatchTab' : 'countdownTab').focus();
+          const next = event.key === 'Home' ? 0 : event.key === 'End' ? modes.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + modes.length) % modes.length;
+          selectTab(modes[next]);
+          document.getElementById(`${modes[next]}Tab`).focus();
         });
       });
       function setStartNow(entry) {
@@ -550,6 +658,13 @@
         digitalDate.textContent = `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`;
         }
         renderCountdownDetails(now);
+        if (activeMode === 'clock' || activeMode === 'timer') {
+          rings.style.display = 'none';
+          countdownUnitRings.style.display = 'none';
+          elapsedRings.style.display = 'none';
+          digitalDisplay.classList.toggle('stopwatch-display', activeMode === 'timer');
+        }
+        renderTimer();
         date.textContent = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long', weekday: 'long' }).format(now);
         dial.setAttribute('aria-label', `Zegar wskazuje ${pad(now.getHours())}:${pad(now.getMinutes())}`);
       }
