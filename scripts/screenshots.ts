@@ -49,6 +49,7 @@ try {
     await page.clock.setFixedTime(demoTime);
     await page.addInitScript(({ key, consentKey, state, allowed }) => {
       localStorage.setItem(key, JSON.stringify(state));
+      localStorage.setItem('horizon.analyticsConsent.v1', 'denied');
       if (allowed) localStorage.setItem(consentKey, 'granted'); else localStorage.removeItem(consentKey);
     }, {
       key: STORAGE_KEY, consentKey: CONSENT_KEY, allowed, state: { ...demo, mode, countdownMode: single ? 'single' : 'all' }

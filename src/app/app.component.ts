@@ -2,6 +2,7 @@ import { afterRenderEffect, Component, computed, ElementRef, inject, OnDestroy, 
 import { FormsModule } from '@angular/forms';
 import { SwUpdate } from '@angular/service-worker';
 import { I18nService } from './i18n.service';
+import { AnalyticsService } from './analytics.service';
 import { AlarmService } from './alarm.service';
 import { StateService } from './state.service';
 import { WorldClocksComponent } from './world-clocks.component';
@@ -23,6 +24,7 @@ interface InstallEvent extends Event {
 export class AppComponent implements OnDestroy {
   readonly storage = inject(StateService);
   readonly alarms = inject(AlarmService);
+  readonly analytics = inject(AnalyticsService);
   readonly state = this.storage.state;
   readonly i18n = inject(I18nService);
   readonly t = (text: string) => this.i18n.t(text);
@@ -121,9 +123,9 @@ export class AppComponent implements OnDestroy {
   constructor() {
     afterRenderEffect(() => {
       const dialog = this.storageDialog().nativeElement;
-      if (this.storage.showBanner()) {
+      if (this.storage.showBanner() || this.analytics.choice() === null) {
         if (!dialog.open) dialog.showModal();
-      } else if (dialog.open) dialog.close();
+      }
     });
     afterRenderEffect(() => {
       this.revision();
@@ -166,11 +168,14 @@ export class AppComponent implements OnDestroy {
   closeStorageInfo(event?: Event): void {
     event?.preventDefault();
     if (this.storage.busy()) return;
+    this.analytics.declineIfUndecided();
     this.storage.continueWithoutSaving();
     this.storageDialog().nativeElement.close();
+    this.revision.update(value => value + 1);
   }
   async allowStorage(): Promise<void> {
     if (await this.storage.enable()) {
+      this.analytics.declineIfUndecided();
       this.alarms.dismiss();
       this.storageDialog().nativeElement.close();
       this.monotonicStart = performance.now() - (restoredTimerElapsed(this.state.timer, Date.now()) - this.state.timer.accumulated);
@@ -178,6 +183,11 @@ export class AppComponent implements OnDestroy {
       this.storageNotice.set('');
       this.revision.update(value => value + 1);
     }
+  }
+  toggleAnalytics(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.analytics.setEnabled(input.checked);
+    input.checked = this.analytics.enabled();
   }
   async toggleStorage(event: Event): Promise<void> {
     const checkbox = event.target as HTMLInputElement;
@@ -187,7 +197,7 @@ export class AppComponent implements OnDestroy {
         this.alarms.dismiss();
         this.monotonicStart = performance.now();
         this.updateReady.set(false);
-        this.storageNotice.set('Dane aplikacji zostały usunięte. Nowe zmiany pozostają tylko w pamięci tej karty.');
+        this.storageNotice.set('Zapisane ustawienia zegarka zostały usunięte. Nowe zmiany ustawień pozostają tylko w pamięci tej karty. Osobna zgoda na statystyki nie została zmieniona.');
         this.revision.update(value => value + 1);
       }
     }

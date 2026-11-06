@@ -5,6 +5,7 @@ test.use({ locale: 'pl-PL', timezoneId: 'Europe/Warsaw' });
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('horizon.storageConsent.v1', 'granted');
+      localStorage.setItem('horizon.analyticsConsent.v1', 'denied');
     const state = window as unknown as { alarmTones: number };
     state.alarmTones = 0;
     const original = AudioContext.prototype.createBufferSource;

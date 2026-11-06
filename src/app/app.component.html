@@ -16,7 +16,13 @@
       <p>{{ t('Zapiszemy na tym urządzeniu ustawienia i dane, które wybierzesz lub wpiszesz na stronie: np. nazwy i terminy odliczań, wyniki stopera, wybrane miasta i język. Dzięki temu wrócisz do nich przy następnej wizycie. Dane te nie są wysyłane na serwer.') }}</p>
       <p><strong>{{ t('Bez zgody możesz korzystać ze strony, ale po odświeżeniu lub zamknięciu strony Twoje ustawienia i wprowadzone dane znikną.') }}</strong></p>
       <p>{{ t('Za Twoją zgodą przeglądarka zapisze również kopię tej aplikacji na urządzeniu. Dzięki temu po pierwszym otwarciu z internetem możesz później otworzyć zegarek, korzystać z odliczania i stopera oraz przeglądać zegary świata także bez połączenia z siecią. Nie musisz pobierać ani otwierać żadnych plików samodzielnie — przeglądarka robi to automatycznie.') }}</p>
-      <p>{{ t('Zapis możesz w każdej chwili wyłączyć przełącznikiem na stronie. Wyłączenie wymaga potwierdzenia i usuwa zapisane dane aplikacji.') }}</p>
+      <p>{{ t('Zapis ustawień zegarka możesz wyłączyć przełącznikiem na stronie. Wyłączenie wymaga potwierdzenia i usuwa te ustawienia oraz pliki offline. Nie zmienia osobnej zgody na statystyki.') }}</p>
+      <p>{{ t('Przy każdym otwarciu strony online zwiększamy także zbiorczy licznik odwiedzin na naszym serwerze. Zapisujemy tylko dzień i liczbę otwarć, bez cookies, identyfikatorów użytkowników i danych wpisanych w aplikacji. Licznik działa niezależnie od zgody na zapis ustawień na urządzeniu.') }}</p>
+      <h3>{{ t('Opcjonalne statystyki unikalnych odwiedzających') }}</h3>
+      <p>{{ t('Tylko za osobną zgodą zapiszemy w localStorage losowy identyfikator tej przeglądarki i będziemy wysyłać go do naszego serwera przy otwarciu strony online. Serwer zapisze jego pseudonimowy skrót i dzień wizyty, aby policzyć powracające przeglądarki. Nie używamy cookies i nie wysyłamy ustawień zegarka. To licznik przeglądarek, nie osób: inne urządzenie, tryb prywatny lub usunięcie identyfikatora może oznaczać nowego odwiedzającego.') }}</p>
+      <label class="display-toggle"><input type="checkbox" [checked]="analytics.enabled()" (change)="toggleAnalytics($event)">{{ t('Zgadzam się na rozpoznawanie tej przeglądarki w statystykach') }}</label>
+      <p>{{ t('Ten wybór jest niezależny od zapisu ustawień zegarka. Zapisujemy wybór zgody lub odmowy, aby nie pytać ponownie. Zgodę możesz wycofać przełącznikiem na dole strony: usunie to identyfikator z urządzenia i zatrzyma dalsze rozpoznawanie. Wcześniej zapisane pseudonimowe statystyki pozostaną na serwerze. Bez tej zgody liczymy tylko otwarcia strony bez identyfikatora.') }}</p>
+      @if (analytics.error()) { <p role="alert">{{ t(analytics.error()) }}</p> }
       <details class="install-instructions">
         <summary>{{ t('Jak zapisać aplikację na telefonie?') }}</summary>
         <h3>Android · Chrome</h3>
@@ -217,6 +223,11 @@
   <section id="worldPanel" role="tabpanel" aria-labelledby="worldTab" [hidden]="state.mode !== 'world'">
     @if (state.mode === 'world') { <app-world-clocks /> }
   </section>
+  <div class="range-form analytics-setting">
+    <label class="display-toggle"><input type="checkbox" [checked]="analytics.enabled()" (change)="toggleAnalytics($event)">{{ t('Rozpoznawaj tę przeglądarkę w statystykach') }}</label>
+    <p class="range-help">{{ t('Opcjonalne i niezależne od zapisu ustawień. Wyłączenie usuwa identyfikator z urządzenia i zatrzymuje dalsze rozpoznawanie. Szczegóły znajdziesz w informacjach o zapisie i statystykach poniżej.') }}</p>
+    @if (analytics.error()) { <p class="range-status error" role="alert">{{ t(analytics.error()) }}</p> }
+  </div>
   <footer class="page-information range-form">
     <button type="button" (click)="openAlarmInfo()">{{ t('Informacje o alarmie') }}</button>
     <button type="button" class="storage-info-button" (click)="openStorageInfo()">{{ t('Informacje o zapisie i instalacji') }}</button>

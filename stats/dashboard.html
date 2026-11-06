@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMART WATCH — statystyki odwiedzin</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;color:#f1f9ff;background:#080e14}body{max-width:850px;margin:0 auto;padding:28px 16px}h1{font-size:25px}p{color:#b4c8cf;line-height:1.6}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{padding:18px;border:1px solid #304c58;border-radius:12px;background:#10232d}.card strong{display:block;font-size:32px;color:#5ae6c6}.card span{font-size:13px}button,a{color:#b7f4e6}button{background:#16333a;border:1px solid #426e73;padding:10px 16px;border-radius:8px;font:inherit;cursor:pointer}table{width:100%;border-collapse:collapse;margin:24px 0}th,td{text-align:left;padding:10px;border-bottom:1px solid #28404c}td:last-child{width:60%}.bar{height:12px;min-width:1px;background:#5ae6c6;border-radius:4px}#status{min-height:24px}footer{font-size:13px}@media(max-width:480px){.cards{grid-template-columns:1fr}.card strong{font-size:27px}}
+</style>
+</head>
+<body>
+<h1>SMART WATCH · Odwiedziny</h1>
+<p>Liczba otwarć aplikacji online. Odświeżenie to kolejne wejście; przełączenie zakładki nie zwiększa licznika. Daty według UTC.</p>
+<div class="cards"><div class="card"><strong id="today">—</strong><span>Dzisiaj (UTC)</span></div><div class="card"><strong id="month">—</strong><span>Ostatnie 30 dni</span></div><div class="card"><strong id="total">—</strong><span>Łącznie od uruchomienia licznika</span></div></div>
+<h2>Unikalne przeglądarki — tylko po zgodzie</h2>
+<p>Jedna przeglądarka z identyfikatorem liczy się raz w wybranym okresie. To nie liczba osób. Wyniki nie obejmują osób bez zgody ani wizyt sprzed włączenia tej funkcji.</p>
+<div class="cards"><div class="card"><strong id="uniqueToday">—</strong><span>Unikalne dzisiaj (UTC)</span></div><div class="card"><strong id="uniqueMonth">—</strong><span>Unikalne w ostatnich 30 dniach</span></div><div class="card"><strong id="uniqueTotal">—</strong><span>Unikalne łącznie</span></div></div>
+<p><button id="refresh" type="button">Odśwież statystyki</button></p><p id="status" role="status"></p>
+<table><caption>Ostatnie 30 dni — od najnowszego</caption><thead><tr><th scope="col">Dzień (UTC)</th><th scope="col">Wejścia</th><th scope="col">Unikalne po zgodzie</th><th scope="col">Porównanie dni</th></tr></thead><tbody id="days"></tbody></table>
+<footer><p>Licznik otwarć zapisuje dzienne sumy bez identyfikatorów. Dodatkowo, tylko po osobnej zgodzie, zapisujemy dzień i pseudonimowy skrót losowego identyfikatora przeglądarki. Identyfikator jest w localStorage, nie w cookies. Nie zapisujemy IP ani ustawień zegarka. Ta sama przeglądarka w różnych dniach liczy się raz w podsumowaniu całego okresu — unikalne za 30 dni to nie suma dziennych wartości. Inne urządzenie, tryb prywatny lub usunięcie identyfikatora może oznaczać nową przeglądarkę. Wcześniejsze pseudonimowe statystyki pozostają po cofnięciu zgody.</p><p>Blokady sieci, tryb offline oraz automatyczne żądania mogą wpływać na wyniki.</p><a href="/">Wróć do zegarka</a></footer>
+<script>
+const status = document.getElementById('status');
+const refresh = document.getElementById('refresh');
+async function load() {
+ refresh.disabled = true;
+ try {
+  const response = await fetch('/api/stats', {cache:'no-store'});
+  if (!response.ok) throw new Error();
+  const data = await response.json();
+  for (const [id,value] of [['today',data.today],['month',data.last30Days],['total',data.total],['uniqueToday',data.uniqueToday],['uniqueMonth',data.uniqueLast30Days],['uniqueTotal',data.uniqueTotal]]) document.getElementById(id).textContent = value.toLocaleString('pl-PL');
+  const maximum = Math.max(1,...data.days.map(day=>day.count));
+  const rows = data.days.slice().reverse().map(day=>{
+   const row = document.createElement('tr');
+   for (const value of [day.day,day.count.toLocaleString('pl-PL'),day.unique.toLocaleString('pl-PL')]) { const cell=document.createElement('td');cell.textContent=value;row.append(cell); }
+   const cell=document.createElement('td');const bar=document.createElement('div');bar.className='bar';bar.style.width=(day.count/maximum*100)+'%';bar.setAttribute('aria-hidden','true');cell.append(bar);row.append(cell);return row;
+  });
+  document.getElementById('days').replaceChildren(...rows);
+  status.textContent = 'Zaktualizowano: '+new Date().toLocaleString('pl-PL');
+ } catch { status.textContent='Nie udało się pobrać statystyk. Sprawdź połączenie lub zaloguj się ponownie.'; }
+ finally { refresh.disabled=false; }
+}
+refresh.addEventListener('click',load);load();
+</script>
+</body></html>

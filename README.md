@@ -15,6 +15,7 @@ Zegarek analogowo-cyfrowy, odliczanie do i od wybranego momentu, stoper z okrą�
 - [Zegary świata / World clocks](#zegary-świata--world-clocks)
 - [Jednostki czasu i zasady obliczeń](#jednostki-czasu-i-zasady-obliczeń)
 - [Zapis danych i restart](#zapis-danych-i-restart)
+- [Statystyki odwiedzin](#statystyki-odwiedzin)
 - [PWA: instalacja, offline i aktualizacje](#pwa-instalacja-offline-i-aktualizacje)
 - [Testy i odtwarzanie zrzutów ekranu](#testy-i-odtwarzanie-zrzutów-ekranu)
 - [Struktura projektu](#struktura-projektu)
@@ -25,7 +26,7 @@ Wszystkie polecenia wykonuj w katalogu repozytorium, chyba że zaznaczono inacze
 
 ### Docker Compose
 
-Wymagany jest działający Docker Engine lub Docker Desktop z wtyczką `docker compose` obsługującą `up --wait`. Nie trzeba instalować Node.js na komputerze: obraz buduje aplikację w kontenerze Node, a gotowe pliki serwuje Nginx.
+Wymagany jest działający Docker Engine lub Docker Desktop z wtyczką `docker compose` obsługującą `up --wait`. Nie trzeba instalować Node.js na komputerze: obraz buduje aplikację w kontenerze Node, a gotowe pliki serwuje Nginx. Drugi kontener uruchamia prosty panel statystyk w Pythonie, z trwałą bazą SQLite.
 
 ```bash
 ./scripts/start.sh
@@ -33,9 +34,9 @@ Wymagany jest działający Docker Engine lub Docker Desktop z wtyczką `docker c
 
 Aplikacja: **http://localhost:4173**.
 
-Skrypt buduje aktualny kod, uruchamia usługę `web` w tle i czeka na pozytywny healthcheck. Ponowne wykonanie skryptu przebudowuje obraz i zastępuje kontener, jeżeli obraz się zmienił. Skrypty można wywoływać także spoza katalogu projektu, podając ich ścieżkę.
+Skrypt buduje aktualny kod, uruchamia usługi `web` i `stats` w tle i czeka na pozytywne healthchecki. Ponowne wykonanie skryptu przebudowuje obraz i zastępuje kontener, jeżeli obraz się zmienił. Skrypty można wywoływać także spoza katalogu projektu, podając ich ścieżkę.
 
-Zatrzymanie i usunięcie kontenera oraz sieci projektu:
+Zatrzymanie i usunięcie kontenerów oraz sieci projektu:
 
 ```bash
 ./scripts/stop.sh
@@ -61,7 +62,7 @@ docker compose down
 
 Obraz ma dwa etapy: `npm ci` i produkcyjna kompilacja Angulara w `node:24-alpine`, następnie serwowanie `dist/horizon/browser` w `nginx:stable-alpine`. Nginx udostępnia `/healthz`, ponownie weryfikuje cache po wdrożeniu i zwraca 404 dla brakujących zasobów zamiast treści HTML. Kontener ma politykę `restart: unless-stopped`.
 
-Dane użytkownika są w przeglądarce, więc nie wymagają wolumenu Docker. Przebudowanie lub usunięcie kontenera ich nie usuwa. Zmiana portu oznacza jednak inny adres witryny i oddzielny zapis danych.
+Ustawienia użytkownika są w przeglądarce, więc nie wymagają wolumenu Docker. Oddzielny licznik odwiedzin używa trwałego wolumenu `visits-data`. Przebudowanie lub usunięcie kontenera ich nie usuwa. Zmiana portu oznacza jednak inny adres witryny i oddzielny zapis danych.
 
 ### Lokalnie, bez Dockera
 
@@ -330,6 +331,50 @@ Dane są lokalne dla przeglądarki i adresu witryny: protokołu, hosta i portu. 
 
 Zapis ma wersjonowany schemat i jest sprawdzany przy odczycie. Starsze dane bez języka lub zegarów świata są uzupełniane. Przy błędnym zapisie aplikacja pokazuje komunikat i ustawienia domyślne; przy niedostępnym odczycie lub zapisie informuje o problemie w wybranym języku.
 
+## Statystyki odwiedzin
+
+`docker compose up -d --build --wait` lub `./scripts/start.sh` uruchamia **dwa kontenery**: `web` (Angular + Nginx, port 4173) oraz `stats` (licznik i panel, SQLite). Serwis `stats` nie wystawia osobnego portu na hoście — dostęp prowadzi przez Nginx.
+
+Panel: **http://localhost:4173/stats**, użytkownik **admin**. Przy pierwszym uruchomieniu powstaje losowe hasło. Odczytaj je lokalnie:
+
+```bash
+./scripts/stats-password.sh
+```
+
+Hasło pozostaje w wolumenie po ponownym uruchomieniu kontenera. Możesz zamiast niego ustawić `STATS_PASSWORD` w lokalnym pliku `.env` (nie dodawaj go do Git), a następnie odtworzyć serwis `stats`. W internecie używaj HTTPS również dla panelu, ponieważ logowanie korzysta z HTTP Basic Auth. Panel i API wyników wymagają logowania; publiczna aplikacja nie zawiera hasła ani linku administracyjnego.
+
+### Co jest liczone
+
+- Po uruchomieniu produkcyjnej aplikacji przeglądarka wysyła **jedno** żądanie `POST /api/visits` z treścią `{"event":"visit"}`.
+- Backend zwiększa licznik dla bieżącego dnia **UTC**. Tabela `visits` zawiera tylko datę i sumę wejść z tego dnia, bez pojedynczych zdarzeń; odrębna tabela unikalnych przeglądarek jest opisana poniżej.
+- Odświeżenie strony albo ponowne otwarcie PWA oznacza nowe wejście. Przełączanie zakładek aplikacji i odświeżanie panelu statystyk nie zwiększa licznika. Powrót do aplikacji pozostającej w pamięci nie jest nowym otwarciem.
+- Panel pokazuje dzisiaj, ostatnie 30 dni, całą historię oraz tabelę i słupki dziennych wyników. Przycisk odświeża dane na żądanie.
+- To **liczba otwarć, nie unikalnych osób**. Dodatkowe rozpoznawanie powracających przeglądarek działa tylko za osobną zgodą, opisaną poniżej. Bot wykonujący JavaScript albo ręczne wywołanie publicznego endpointu może zwiększyć licznik.
+- Wejścia offline i nieudane żądania nie są kolejkowane ani odtwarzane później. Blokery, problemy z siecią i otwarcia przed wdrożeniem licznika nie pojawią się w wynikach. `npm start` nie wysyła statystyk; samo opublikowanie statycznego buildu bez tego backendu nie zapewni licznika.
+
+### Unikalne przeglądarki — osobna zgoda
+
+Panel rozdziela **otwarcia strony** od **unikalnych przeglądarek po zgodzie**. Pokazuje unikalne dzisiaj, przez ostatnie 30 dni, łącznie oraz w poszczególnych dniach UTC. Ta sama przeglądarka odwiedzająca stronę przez pięć dni liczy się pięć razy w dziennych wierszach, ale **raz w podsumowaniu 30 dni**. Nie sumujemy dziennych unikalnych wyników.
+
+- Checkbox w popupie informacji jest **domyślnie wyłączony**. Zgoda na zapis ustawień zegarka **nie oznacza** zgody na rozpoznawanie przeglądarki i odwrotnie. Istniejące instalacje z zapisanymi ustawieniami zobaczą informacje o nowym wyborze.
+- Po zaznaczeniu zapisujemy losowy UUID v4 w `localStorage`, pod kluczem **`horizon.visitorId.v1`**. Nie ma cookies. Zgoda lub odmowa jest zapamiętywana oddzielnie jako `granted` / `denied` pod **`horizon.analyticsConsent.v1`**. Zamknięcie popupu bez zaznaczenia zgody oznacza odmowę; zapis samego wyboru zapobiega ponownemu pytaniu. Niedostępny localStorage uniemożliwia włączenie rozpoznawania.
+- Produkcyjna aplikacja z aktywną zgodą wysyła przy otwarciu online `POST /api/visitors` z `{"visitorId":"losowy-uuid-v4"}`. Zgoda udzielona już na otwartej stronie też zgłasza tę przeglądarkę, ale **nie zwiększa drugi raz licznika otwarć**. Zmiana zakładek nie wysyła kolejnych zdarzeń. Nie kolejkowujemy wizyt offline.
+- Serwer sprawdza format UUID, oblicza **HMAC-SHA256 z tajnym kluczem własnego serwera** i zapisuje tylko parę `(dzień UTC, skrót)`. Oryginalny UUID nie trafia do bazy ani logów backendu. Klucz jest tworzony automatycznie w wolumenie i pozostaje po restarcie. Dodatkowa tabela jest tworzona bez kasowania dotychczasowych sum wejść; starszych wizyt nie da się rozpoznać wstecz.
+- To dane **pseudonimowe**, a nie całkowicie anonimowe: ten sam skrót pozwala rozpoznać tę samą przeglądarkę w kolejnych dniach. Nie służy do śledzenia między różnymi witrynami i nie jest łączony z nazwami procesów ani ustawieniami aplikacji.
+- **To nie liczba osób.** Inna przeglądarka lub urządzenie, tryb prywatny, cofnięcie i ponowne udzielenie zgody albo usunięcie identyfikatora może dać nowy identyfikator. Współdzielona przeglądarka kilku osób liczy się jako jedna. Osoby bez zgody nie są uwzględniane w unikalnych wynikach — nie szacujemy brakujących użytkowników na podstawie IP.
+- Zgodę można zmienić w popupie otwieranym przyciskiem informacji albo przełącznikiem **„Rozpoznawaj tę przeglądarkę w statystykach”** na dole strony. Wyłączenie usuwa lokalny identyfikator i zatrzymuje dalsze rozpoznawanie, również w innych otwartych kartach. Wcześniejsze pseudonimowe rekordy i zbiorcze sumy **pozostają na serwerze**, aż administrator usunie bazę/wolumen. Zmiana zgody nie usuwa ustawień zegarka. Wyłączenie zapisu ustawień zegarka nie cofa odrębnej zgody analitycznej.
+- Okres przechowywania identyfikatora to czas do cofnięcia zgody lub usunięcia danych witryny. Dzienne skróty na serwerze nie mają automatycznego terminu usuwania. Backup i odtworzenie całego wolumenu muszą obejmować też `visitor-secret`, aby zachować ciągłość rozpoznawania.
+
+Informacje oraz niezależne przełączniki są dostępne w PL i EN. Samo odświeżanie chronionego panelu `/stats` nie jest liczone jako wizyta aplikacji.
+
+### Dane i trwałość
+
+Nie używamy cookies ani odcisków przeglądarki. Podstawowy licznik otwarć nie używa identyfikatorów; opcjonalny licznik unikalnych przeglądarek używa identyfikatora tylko po osobnej zgodzie. Serwis statystyk nie zapisuje adresów IP, modeli urządzeń, nazw przeglądarek, źródeł ruchu, adresów odwiedzonych stron ani ustawień zegarka. Licznik jest niezależny od zgody na zapis ustawień na urządzeniu; popup informacyjny w PL i EN opisuje oba mechanizmy. Serwer obsługujący HTTP otrzymuje zwykłe dane połączenia, ale backend nie utrwala ich w statystykach i nie prowadzi logów żądań. Nginx nie loguje żądań do endpointów licznika i panelu; jego pozostałe logi oraz logi zewnętrznego reverse proxy są odrębną konfiguracją serwera.
+
+Wolumen Compose **`visits-data`** zawiera `visits.sqlite3`, hasło panelu oraz tajny klucz `visitor-secret` do pseudonimizacji identyfikatorów. Dane przeżywają restart, przebudowę i zwykłe `docker compose down`. Polecenie **`docker compose down -v` usuwa statystyki i hasło**. Nie jest to kopia zapasowa — do backupu zatrzymaj `stats` i wykonaj kopię całego wolumenu (w tym plików SQLite WAL), a potem uruchom usługę ponownie. Usunięcie danych witryny w przeglądarce nie kasuje zbiorczych statystyk serwera.
+
+Testy backendu: `python3 -m unittest discover -s tests/stats -v` (bez dodatkowych pakietów).
+
 ## PWA: instalacja, offline i aktualizacje
 
 PWA pozwala uruchamiać aplikację z ikony i używać jej bez sieci po pobraniu potrzebnych zasobów. Sam zapis danych w localStorage i cache plików aplikacji to dwa odrębne mechanizmy.
@@ -418,6 +463,9 @@ Zestaw obejmuje popup zgody, wszystkie pięć zakładek, oba widoki „Odliczani
 | `src/app/alarm.service.ts` | Jednorazowe alarmy w aktywnej aplikacji, Web Audio i obsługa miniętych terminów. |
 | `src/app/state.service.ts`, `src/app/persistence.ts`, `src/app/storage-consent.ts` | Zgoda, włączanie i wyłączanie zapisu, usuwanie danych/cache, walidacja i migracja. |
 | `src/app/i18n.service.ts`, `src/app/translations.ts` | PL/EN, wykrywanie języka i słownik. |
+| `src/app/analytics.service.ts` | Zgoda na rozpoznawanie przeglądarki, lokalny identyfikator i wysyłanie statystyk. |
+| `stats/` | Serwis licznika, chroniony panel i Dockerfile kontenera statystyk. |
+| `scripts/stats-password.sh` | Odczyt lokalnego hasła administratora panelu. |
 | `src/styles.css` | Wygląd, responsywność i karuzela. |
 | `public/`, `ngsw-config.json`, `src/main.ts` | Manifest, ikony i konfiguracja PWA. |
 | `Dockerfile`, `compose.yaml`, `docker/nginx.conf` | Budowanie i serwowanie wersji produkcyjnej. |

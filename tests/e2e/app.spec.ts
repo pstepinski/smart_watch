@@ -13,6 +13,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     if (!sessionStorage.getItem('horizon.testConsentSeeded')) {
       localStorage.setItem('horizon.storageConsent.v1', 'granted');
+      localStorage.setItem('horizon.analyticsConsent.v1', 'denied');
       sessionStorage.setItem('horizon.testConsentSeeded', 'true');
     }
   });
@@ -132,7 +133,7 @@ test('dane i uruchomiony stoper przetrwają zamknięcie oraz uruchomienie przegl
   const profile = testInfo.outputPath('profile');
   let context = await chromium.launchPersistentContext(profile, { headless: true });
   let page = await context.newPage();
-  await page.addInitScript(() => localStorage.setItem('horizon.storageConsent.v1', 'granted'));
+  await page.addInitScript(() => { localStorage.setItem('horizon.storageConsent.v1', 'granted'); localStorage.setItem('horizon.analyticsConsent.v1', 'denied'); });
   await page.goto(testInfo.project.use.baseURL as string);
   await page.getByRole('tab', { name: 'Stoper', exact: true }).click();
   await page.getByRole('button', { name: 'Start', exact: true }).click();

@@ -6,4 +6,19 @@ services:
       dockerfile: Dockerfile
     ports:
       - "${HORIZON_PORT:-4173}:80"
+    depends_on:
+      stats:
+        condition: service_healthy
     restart: unless-stopped
+
+  stats:
+    build:
+      context: ./stats
+    environment:
+      STATS_PASSWORD: "${STATS_PASSWORD:-}"
+    volumes:
+      - visits-data:/data
+    restart: unless-stopped
+
+volumes:
+  visits-data:

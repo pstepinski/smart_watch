@@ -12,6 +12,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
     state.nextProcessId = 21;
     await page.addInitScript(state => {
       localStorage.setItem('horizon.storageConsent.v1', 'granted');
+      localStorage.setItem('horizon.analyticsConsent.v1', 'denied');
       localStorage.setItem('horizon.state.v1', JSON.stringify(state));
     }, state);
     await page.goto('/');

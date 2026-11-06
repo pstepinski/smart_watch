@@ -12,4 +12,4 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 
 docker compose --project-directory "$project_dir" -f "$project_dir/compose.yaml" down "$@"
-echo "Aplikacja została zatrzymana. Dane zapisane w przeglądarce pozostają zachowane."
+echo "Aplikacja została zatrzymana. Dane zapisane w przeglądarce i statystyki w wolumenie pozostają zachowane, chyba że podano --volumes."

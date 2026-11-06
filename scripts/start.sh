@@ -13,3 +13,4 @@ fi
 
 docker compose --project-directory "$project_dir" -f "$project_dir/compose.yaml" up --detach --build --wait --wait-timeout 60 "$@"
 echo "Aplikacja działa. Domyślny adres: http://localhost:4173 (port można zmienić przez HORIZON_PORT)."
+echo "Panel odwiedzin: http://localhost:${HORIZON_PORT:-4173}/stats (login: admin; hasło: ./scripts/stats-password.sh)."
