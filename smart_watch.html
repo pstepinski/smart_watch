@@ -43,6 +43,8 @@
     .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
     .unit-toggles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 16px; margin-top: 20px; }
     .unit-toggles .display-toggle { margin-bottom: 8px; }
+    .active-stopwatch { background: #254b503d; }
+    .range-form input[type="radio"] { width: 20px; min-width: 0; height: 20px; accent-color: var(--accent); cursor: pointer; }
     .unit-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
     .elapsed-total { color: var(--ice); font-size: 18px; font-variant-numeric: tabular-nums; }
     .table-scroll { overflow-x: auto; }
@@ -72,9 +74,9 @@
     .pin { position: absolute; z-index: 8; left: 50%; top: 50%; width: 16px; height: 16px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--accent); border: 4px solid #16333a; box-shadow: 0 0 0 2px #7dddc9, 0 0 12px #5ae6c66a; }
     .digital { position: absolute; z-index: 3; left: 50%; top: 58%; transform: translateX(-50%); width: 43%; padding: 7px 6px 6px; border: 1px solid #386b71; border-radius: 8px; background: linear-gradient(180deg, #020b11 0%, #0c2329 100%); box-shadow: inset 0 1px 10px #000a, 0 1px 0 #7ff6db17, 0 0 22px #29bfaa17; }
     .digital-label { font-size: clamp(5px, 1.15vw, 7px); font-weight: 750; letter-spacing: .25em; color: #4f9d99; margin-bottom: 2px; }
-    .digital-time { font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: clamp(13px, 3.6vw, 22px); font-weight: 700; letter-spacing: .025em; color: var(--ice); text-shadow: 0 0 12px #79f5d667; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .digital.stopwatch-display { top: 54%; width: 48%; }
-    .stopwatch-display .digital-time { font-size: clamp(7px, 2vw, 11px); line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere; }
+    .digital-time { font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: clamp(13px, 3.6vw, 22px); font-weight: 700; letter-spacing: .025em; color: var(--ice); text-shadow: 0 0 12px #79f5d667; font-variant-numeric: tabular-nums; white-space: nowrap; height: calc(clamp(13px, 3.6vw, 22px) * 1.2); line-height: 1.2; display: flex; align-items: center; justify-content: center; }
+    .stopwatch-display .digital-time { font-size: min(15px, calc(48vw / var(--readout-length, 8)), calc(235px / var(--readout-length, 8))); line-height: 1.4; white-space: nowrap; }
+    .stopwatch-display .digital-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .footer { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 10px; letter-spacing: .18em; color: #8397a0; text-transform: uppercase; }
     .live-dot { display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: #6dedc9; box-shadow: 0 0 10px #6dedc9a6; vertical-align: 1px; }
     .footer-sep { width: 1px; height: 12px; background: #39505a; }
@@ -119,12 +121,13 @@
     </section>
     <section id="stopwatchPanel" role="tabpanel" aria-labelledby="stopwatchTab" hidden>
       <form class="range-form" id="stopwatchForm">
-        <label for="stopwatchStart">Odliczaj od wybranego momentu (czas lokalny)</label>
-        <input type="datetime-local" id="stopwatchStart" step="1" required>
-        <button type="button" id="startNow">Od teraz</button>
-        <p id="elapsedTotal" class="elapsed-total" role="status"></p>
-        <div class="unit-toggles" id="unitToggles"></div>
-        <p class="range-help">Pierścienie rosną wraz z upływem czasu i rozpoczynają kolejny obrót po pełnym cyklu: sekundy / 60, minuty / 60, godziny / 24, dni / 7, tygodnie / 52, miesiące / 12, lata / 10. Miesiące i lata liczone są kalendarzowo od wybranego momentu. Przy jednostkach widoczny jest łączny upływ czasu.</p>
+        <div class="table-scroll"><table class="range-table">
+          <caption>Stopery</caption>
+          <thead><tr><th scope="col">Na zegarku</th><th scope="col">Nazwa</th><th scope="col">Początek</th><th scope="col">Widoczne jednostki</th><th scope="col">Upłynęło</th><th scope="col">Akcje</th></tr></thead>
+          <tbody id="stopwatchRows"></tbody>
+        </table></div>
+        <button type="button" id="addStopwatch">+ Dodaj stoper</button>
+        <p class="range-help">Bez daty stoper liczy od podanej godziny dzisiaj; przed tą godziną oczekuje na początek. Pierścienie rosną wraz z upływem czasu i rozpoczynają kolejny obrót po pełnym cyklu: sekundy / 60, minuty / 60, godziny / 24, dni / 7, tygodnie / 52, miesiące / 12, lata / 10. Miesiące i lata liczone są kalendarzowo od wybranego momentu. Przy jednostkach widoczny jest łączny upływ czasu.</p>
       </form>
     </section>
   </main>
@@ -157,8 +160,19 @@
       ];
       let stopwatchMode = false;
       const elapsedRings = document.getElementById('elapsedRings');
-      const stopwatchStart = document.getElementById('stopwatchStart');
-      const elapsedTotal = document.getElementById('elapsedTotal');
+      const stopwatches = [];
+      let activeStopwatch = null;
+      let nextStopwatchId = 1;
+      const unitPresets = [
+        ['clock', 'Czas — godziny, minuty, sekundy', [0, 1, 2]],
+        ['days', 'Dni i czas', [0, 1, 2, 3]],
+        ['weeks', 'Tygodnie i dni', [3, 4]],
+        ['calendar', 'Lata, miesiące i dni', [3, 5, 6]],
+        ['yearsMonths', 'Lata i miesiące', [5, 6]],
+        ['seconds', 'Tylko sekundy', [0]],
+        ['all', 'Wszystkie jednostki', [0, 1, 2, 3, 4, 5, 6]],
+        ['none', 'Ukryj wszystkie', []]
+      ];
       const units = [
         ['Sekundy', 60, '#5ae6c6'], ['Minuty', 60, '#65baff'], ['Godziny', 24, '#b99aff'],
         ['Dni', 7, '#ff8fbc'], ['Tygodnie', 52, '#ffb366'], ['Miesiące', 12, '#f4df77'], ['Lata', 10, '#f1f9ff']
@@ -167,14 +181,74 @@
         for (const [key, value] of Object.entries({cx: 50, cy: 50, r: 28 - index * 3.2, pathLength: 100})) ring.setAttribute(key, value);
         ring.style.stroke = color;
         elapsedRings.appendChild(ring);
-        const label = document.createElement('label');
-        label.className = 'display-toggle';
-        label.innerHTML = `<input type="checkbox" role="switch" checked aria-label="Pokaż pierścień: ${name}"><span class="unit-dot" style="background: ${color}"></span><span>${name}</span><span class="unit-value"></span>`;
-        document.getElementById('unitToggles').appendChild(label);
-        const toggle = label.querySelector('input');
-        toggle.addEventListener('change', () => refresh());
-        return {name, ring, toggle, value: label.querySelector('.unit-value'), cycle};
+        return {name, ring, cycle, color};
       });
+      function activateStopwatch(entry) {
+        activeStopwatch = entry;
+        stopwatches.forEach(item => {
+          item.radio.checked = item === entry;
+          item.row.classList.toggle('active-stopwatch', item === entry);
+        });
+        refresh();
+      }
+      function addStopwatch() {
+        const id = nextStopwatchId++;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><input type="radio" name="activeStopwatch" aria-label="Pokaż stoper ${id} na zegarku"></td>
+          <td><label>Nazwa<input type="text" data-field="name" value="Stoper ${id}" maxlength="80"></label></td>
+          <td><label>Data (opcjonalnie)<input type="date" data-field="stopwatchDate"></label><label>Godzina (czas lokalny)<input type="time" data-field="stopwatchTime" step="1" required></label><button type="button" data-action="now">Od teraz</button></td>
+          <td><label>Szybki wybór<select data-field="unitPreset"><option value="custom">Własny zestaw</option>${unitPresets.map(([key, name]) => `<option value="${key}">${name}</option>`).join('')}</select></label><div class="unit-toggles"></div></td>
+          <td><p class="range-status"></p></td>
+          <td><button type="button" data-action="remove">Usuń</button></td>`;
+        const entry = {id, row, radio: row.querySelector('input[type="radio"]'), name: row.querySelector('[data-field="name"]'),
+          startDate: row.querySelector('[data-field="stopwatchDate"]'), startTime: row.querySelector('[data-field="stopwatchTime"]'), status: row.querySelector('.range-status')};
+        entry.units = units.map(unit => {
+          const label = document.createElement('label');
+          label.className = 'display-toggle';
+          label.innerHTML = `<input type="checkbox" role="switch" checked><span class="unit-dot" style="background: ${unit.color}"></span><span>${unit.name}</span><span class="unit-value"></span>`;
+          row.querySelector('.unit-toggles').appendChild(label);
+          return {...unit, toggle: label.querySelector('input'), value: label.querySelector('.unit-value')};
+        });
+        const presetSelect = row.querySelector('[data-field="unitPreset"]');
+        function syncPreset() {
+          const match = unitPresets.find(([, , indexes]) => entry.units.every((unit, index) => unit.toggle.checked === indexes.includes(index)));
+          presetSelect.value = match ? match[0] : 'custom';
+        }
+        entry.units.forEach(unit => unit.toggle.addEventListener('change', () => { syncPreset(); refresh(); }));
+        presetSelect.addEventListener('change', () => {
+          const preset = unitPresets.find(([key]) => key === presetSelect.value);
+          if (!preset) return;
+          entry.units.forEach((unit, index) => { unit.toggle.checked = preset[2].includes(index); });
+          refresh();
+        });
+        syncPreset();
+        function updateLabels() {
+          const name = entry.name.value.trim() || `Stoper ${id}`;
+          presetSelect.setAttribute('aria-label', `Zestaw jednostek: ${name}`);
+          entry.radio.setAttribute('aria-label', `Pokaż na zegarku: ${name}`);
+          entry.startDate.setAttribute('aria-label', `Data początku (opcjonalnie): ${name}`);
+          entry.startTime.setAttribute('aria-label', `Godzina początku: ${name}`);
+          row.querySelector('[data-action="remove"]').setAttribute('aria-label', `Usuń: ${name}`);
+          entry.units.forEach(unit => unit.toggle.setAttribute('aria-label', `${name}: ${unit.name}`));
+        }
+        row.addEventListener('input', () => { updateLabels(); refresh(); });
+        row.addEventListener('change', () => refresh());
+        entry.radio.addEventListener('change', () => { if (entry.radio.checked) activateStopwatch(entry); });
+        row.querySelector('[data-action="now"]').addEventListener('click', () => setStartNow(entry));
+        row.querySelector('[data-action="remove"]').addEventListener('click', () => {
+          stopwatches.splice(stopwatches.indexOf(entry), 1);
+          row.remove();
+          if (activeStopwatch === entry) activateStopwatch(stopwatches[0] || null);
+          else refresh();
+        });
+        stopwatches.push(entry);
+        document.getElementById('stopwatchRows').appendChild(row);
+        updateLabels();
+        setStartNow(entry);
+        if (!activeStopwatch) activateStopwatch(entry);
+      }
+      document.getElementById('addStopwatch').addEventListener('click', addStopwatch);
       function selectTab(stopwatch) {
         stopwatchMode = stopwatch;
         digitalDisplay.classList.toggle('stopwatch-display', stopwatch);
@@ -201,14 +275,13 @@
           document.getElementById(next ? 'stopwatchTab' : 'countdownTab').focus();
         });
       });
-      function setStartNow() {
+      function setStartNow(entry) {
         const now = new Date();
-        stopwatchStart.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        entry.startDate.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        entry.startTime.value = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
         refresh();
       }
-      document.getElementById('startNow').addEventListener('click', setStartNow);
       document.getElementById('stopwatchForm').addEventListener('submit', event => event.preventDefault());
-      stopwatchStart.addEventListener('input', () => refresh());
       // Clamp anniversaries to the last day of shorter months (e.g. 31 January → 28 February).
       function anniversary(start, months) {
         const result = new Date(start);
@@ -226,19 +299,33 @@
         return count + (now - previous) / (next - previous);
       }
       function updateStopwatch(now) {
-        const start = new Date(stopwatchStart.value);
+        stopwatches.forEach(entry => updateStopwatchEntry(now, entry));
+        if (!activeStopwatch) {
+          units.forEach(unit => { unit.ring.style.display = 'none'; });
+          if (stopwatchMode) {
+            digital.textContent = 'Dodaj stoper';
+            digitalDate.textContent = 'BRAK STOPERA';
+          }
+        }
+      }
+      function updateStopwatchEntry(now, entry) {
+        const units = entry.units;
+        const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        const start = new Date(`${entry.startDate.value || today}T${entry.startTime.value}`);
         const valid = Number.isFinite(+start);
         const seconds = valid ? Math.max(0, (now - start) / 1000) : 0;
         const values = [seconds, seconds / 60, seconds / 3600, seconds / 86400, seconds / 604800,
           valid && now >= start ? calendarElapsed(start, now, 1) : 0,
           valid && now >= start ? calendarElapsed(start, now, 12) : 0];
         units.forEach((unit, index) => {
+          if (entry === activeStopwatch) {
           unit.ring.style.display = valid && unit.toggle.checked ? '' : 'none';
           unit.ring.style.strokeDasharray = `${values[index] % unit.cycle / unit.cycle * 100} 100`;
+          }
           const value = valid ? String(Math.floor(values[index])) : '—';
           if (unit.value.textContent !== value) unit.value.textContent = value;
         });
-        if (stopwatchMode) {
+        if (stopwatchMode && entry === activeStopwatch) {
           const parts = Array(units.length).fill(0);
           let cursor = valid ? new Date(start) : null;
           if (valid && now >= start) {
@@ -261,25 +348,20 @@
               remaining -= parts[index] * durations[index];
             }
           }
-          const forms = [
-            ['sekunda', 'sekundy', 'sekund'], ['minuta', 'minuty', 'minut'],
-            ['godzina', 'godziny', 'godzin'], ['dzień', 'dni', 'dni'],
-            ['tydzień', 'tygodnie', 'tygodni'], ['miesiąc', 'miesiące', 'miesięcy'], ['rok', 'lata', 'lat']
-          ];
-          const selected = units.flatMap((unit, index) => {
-            if (!unit.toggle.checked) return [];
-            if (!valid) return [`${unit.name}: —`];
-            const count = parts[index];
-            const form = count === 1 ? 0 : count % 10 >= 2 && count % 10 <= 4 && !(count % 100 >= 12 && count % 100 <= 14) ? 1 : 2;
-            return [`${count} ${forms[index][form]}`];
-          }).reverse();
-          const readout = selected.length ? selected.join('\n') : 'Wybierz jednostki';
+          const suffixes = {3: 'd', 4: 't', 5: 'm', 6: 'r'};
+          const largerUnits = [6, 5, 4, 3].filter(index => units[index].toggle.checked)
+            .map(index => `${valid ? parts[index] : '—'}${suffixes[index]}`);
+          const time = [2, 1, 0].filter(index => units[index].toggle.checked)
+            .map(index => valid ? pad(parts[index]) : '—').join(':');
+          const readout = [...largerUnits, ...(time ? [time] : [])].join(' ') || '—';
+          digital.style.setProperty('--readout-length', Math.max(8, readout.length));
           if (digital.textContent !== readout) digital.textContent = readout;
-          digitalDate.textContent = !valid ? 'WYBIERZ POCZĄTEK' : now < start ? 'OCZEKIWANIE' : 'UPŁYNĘŁO';
+          digitalDate.textContent = entry.name.value.trim() || `Stoper ${entry.id}`;
+          digitalDate.title = digitalDate.textContent;
         }
-        const message = !valid ? 'Wybierz datę i godzinę początku.' : now < start ? 'Oczekiwanie na wybrany moment.' :
+        const message = !valid ? 'Podaj godzinę początku (data jest opcjonalna).' : now < start ? 'Oczekiwanie na wybrany moment.' :
           `Upłynęło: ${Math.floor(seconds / 86400)} dni ${pad(Math.floor(seconds / 3600) % 24)}:${pad(Math.floor(seconds / 60) % 60)}:${pad(Math.floor(seconds) % 60)}`;
-        if (elapsedTotal.textContent !== message) elapsedTotal.textContent = message;
+        if (entry.status.textContent !== message) entry.status.textContent = message;
       }
       const ranges = [];
       let nextId = 1;
@@ -377,13 +459,14 @@
         minute.style.setProperty('--angle', `${m * 6}deg`);
         second.style.setProperty('--angle', `${s * 6}deg`);
         if (!stopwatchMode) {
+        digitalDate.removeAttribute('title');
         digital.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
         digitalDate.textContent = `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`;
         }
         date.textContent = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long', weekday: 'long' }).format(now);
         dial.setAttribute('aria-label', `Zegar wskazuje ${pad(now.getHours())}:${pad(now.getMinutes())}`);
       }
-      setStartNow();
+      addStopwatch();
       addRange();
       setInterval(refresh, 50);
     })();
