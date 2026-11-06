@@ -1,15 +1,19 @@
 @let vm = view();
-<main class="stage" aria-label="Hybrydowy zegar analogowo-cyfrowy">
+<main class="stage" [attr.aria-label]="t('Hybrydowy zegar analogowo-cyfrowy')">
   <div class="eyebrow">PRECISION TIMEKEEPING</div>
   <h1>HORIZON</h1>
-  <div class="subtitle">Analog × Digital · Edition 01</div>
-  <div class="tabs" role="tablist" aria-label="Tryb zegara">
+  <div class="language-picker"><label>{{ t('Język interfejsu') }}
+    <select id="languageSelect" [ngModel]="i18n.language()" (ngModelChange)="i18n.setLanguage($event)" [attr.aria-label]="t('Język interfejsu')">
+      <option value="pl">PL</option><option value="en">EN</option>
+    </select>
+  </label></div>
+  <div class="tabs" role="tablist" [attr.aria-label]="t('Tryb zegara')">
     @for (tab of tabs; track tab.id; let i = $index) {
       <button type="button" [id]="tab.id + 'Tab'" role="tab" [attr.aria-selected]="state.mode === tab.id" [attr.aria-controls]="tab.id + 'Panel'"
-        [tabIndex]="state.mode === tab.id ? 0 : -1" (click)="selectTab(tab.id)" (keydown)="tabKey($event, i)">{{ tab.label }}</button>
+        [tabIndex]="state.mode === tab.id ? 0 : -1" (click)="selectTab(tab.id)" (keydown)="tabKey($event, i)">{{ t(tab.label) }}</button>
     }
   </div>
-  <div class="watch-shell"><div class="bezel"><div class="dial" role="img" [attr.aria-label]="'Zegar: ' + vm.digitalLabel + ' ' + vm.digitalTime">
+  <div class="watch-shell"><div class="bezel"><div class="dial" role="img" [attr.aria-label]="t('Zegar: ') + vm.digitalLabel + ' ' + vm.digitalTime">
     @for (tick of ticks; track tick) { <div class="tick" [class.major]="tick % 5 === 0" [style.--rot]="tick * 6 + 'deg'"></div> }
     <div class="numeral n12">12</div><div class="numeral n3">3</div><div class="numeral n6">6</div><div class="numeral n9">9</div>
     <svg class="countdown-ring" viewBox="0 0 100 100" aria-hidden="true">
@@ -23,86 +27,86 @@
     </div>
     <div class="hand hour" [style.--angle]="vm.hourAngle"></div><div class="hand minute" [style.--angle]="vm.minuteAngle"></div><div class="hand second" [style.--angle]="vm.secondAngle"></div><div class="pin"></div>
   </div></div></div>
-  <div class="footer"><span><span class="live-dot"></span>LIVE CLOCK</span><span class="footer-sep"></span><span>{{ vm.dateLabel }}</span></div>
-  <div class="range-form"><label class="display-toggle" style="margin: 0"><input type="checkbox" role="switch" aria-controls="digitalDisplay" [(ngModel)]="state.showDigital" (ngModelChange)="changed()">Pokaż wyświetlacz cyfrowy</label></div>
-  <p class="storage-status" [class.error]="storage.error()" role="status">{{ storage.error() || 'Dane są zapisywane na tym urządzeniu.' }}</p>
+  <div class="footer"><span>{{ vm.dateLabel }}</span></div>
+  <div class="range-form"><label class="display-toggle" style="margin: 0"><input type="checkbox" role="switch" aria-controls="digitalDisplay" [(ngModel)]="state.showDigital" (ngModelChange)="changed()">{{ t('Pokaż wyświetlacz cyfrowy') }}</label></div>
+  <p class="storage-status" [class.error]="storage.error()" role="status">{{ t(storage.error() || 'Dane są zapisywane na tym urządzeniu.') }}</p>
   @if (installPrompt() || updateReady()) {
     <div class="install-bar">
-      @if (installPrompt()) { <button type="button" (click)="install()">Zainstaluj aplikację</button> }
-      @if (updateReady()) { <span>Dostępna jest nowa wersja.</span><button type="button" (click)="reload()">Odśwież aplikację</button> }
+      @if (installPrompt()) { <button type="button" (click)="install()">{{ t('Zainstaluj aplikację') }}</button> }
+      @if (updateReady()) { <span>{{ t('Dostępna jest nowa wersja.') }}</span><button type="button" (click)="reload()">{{ t('Odśwież aplikację') }}</button> }
     </div>
   }
-  <section id="clockPanel" role="tabpanel" aria-labelledby="clockTab" [hidden]="state.mode !== 'clock'"><p class="range-help">Aktualna data i godzina.</p></section>
+  <section id="clockPanel" role="tabpanel" aria-labelledby="clockTab" [hidden]="state.mode !== 'clock'"><p class="range-help">{{ t('Aktualna data i godzina.') }}</p></section>
   <section id="countdownPanel" role="tabpanel" aria-labelledby="countdownTab" [hidden]="state.mode !== 'countdown'">
     <div class="range-form">
-      <label>Widok odliczania<select [(ngModel)]="state.countdownMode" (ngModelChange)="changed()"><option value="all">Wszystkie procesy — jeden pasek na proces</option><option value="single">Wybrany proces — pasek na jednostkę czasu</option></select></label>
+      <label>{{ t('Widok odliczania') }}<select [(ngModel)]="state.countdownMode" (ngModelChange)="changed()"><option value="all">{{ t('Wszystkie procesy — jeden pasek na proces') }}</option><option value="single">{{ t('Wybrany proces — pasek na jednostkę czasu') }}</option></select></label>
       @if (state.countdownMode === 'single') {
-        <app-unit-picker [selection]="state.countdownUnits" (selectionChange)="state.countdownUnits = $event; changed()" label="Odliczanie do" />
-        <p class="range-help">Wybierz proces opcją „Na zegarku”. Pierścienie maleją wraz z pozostałym czasem w kolejnych cyklach jednostek.</p>
+        <app-unit-picker [selection]="state.countdownUnits" (selectionChange)="state.countdownUnits = $event; changed()" [label]="t('Odliczanie do')" />
+        <p class="range-help">{{ t('Wybierz proces opcją „Na zegarku”. Pierścienie maleją wraz z pozostałym czasem w kolejnych cyklach jednostek.') }}</p>
       }
       <div class="table-scroll"><table class="range-table">
-        <caption>Paski postępu</caption>
-        <thead><tr><th scope="col">Nazwa / kolor</th><th scope="col">Początek</th><th scope="col">Koniec</th><th scope="col">Pozostały czas</th><th scope="col">Akcje</th></tr></thead>
+        <caption>{{ t('Paski postępu') }}</caption>
+        <thead><tr><th scope="col">{{ t('Nazwa / kolor') }}</th><th scope="col">{{ t('Początek') }}</th><th scope="col">{{ t('Koniec') }}</th><th scope="col">{{ t('Pozostały czas') }}</th><th scope="col">{{ t('Akcje') }}</th></tr></thead>
         <tbody>
           @for (item of vm.processes; track item.entry.id) {
             @let entry = item.entry;
             <tr [style.--row-color]="entry.color">
               <td>
                 @if (state.countdownMode === 'all') {
-                  <label class="display-toggle"><input type="checkbox" role="switch" [(ngModel)]="entry.visible" (ngModelChange)="changed()" [attr.aria-label]="'Pokaż proces: ' + entry.name">Pokaż proces</label>
+                  <label class="display-toggle"><input type="checkbox" role="switch" [(ngModel)]="entry.visible" (ngModelChange)="changed()" [attr.aria-label]="t('Pokaż proces: ') + entry.name">{{ t('Pokaż proces') }}</label>
                 } @else {
-                  <label class="display-toggle"><input type="radio" name="activeProcess" [value]="entry.id" [(ngModel)]="state.activeProcessId" (ngModelChange)="changed()" [attr.aria-label]="'Pokaż na zegarku: ' + entry.name">Na zegarku</label>
+                  <label class="display-toggle"><input type="radio" name="activeProcess" [value]="entry.id" [(ngModel)]="state.activeProcessId" (ngModelChange)="changed()" [attr.aria-label]="t('Pokaż na zegarku: ') + entry.name">{{ t('Na zegarku') }}</label>
                 }
-                <label>Nazwa<input type="text" maxlength="80" [(ngModel)]="entry.name" (ngModelChange)="changed()" [attr.aria-label]="'Nazwa procesu ' + entry.id"></label>
-                <label>Kolor<select [(ngModel)]="entry.color" (ngModelChange)="changed()" [attr.aria-label]="'Kolor: ' + entry.name">@for (color of palette; track color.color) { <option [value]="color.color">{{ color.name }}</option> }</select></label>
+                <label>{{ t('Nazwa') }}<input type="text" maxlength="80" [(ngModel)]="entry.name" (ngModelChange)="changed()" [attr.aria-label]="t('Nazwa procesu ') + entry.id"></label>
+                <label>{{ t('Kolor') }}<select [(ngModel)]="entry.color" (ngModelChange)="changed()" [attr.aria-label]="t('Kolor: ') + entry.name">@for (color of palette; track color.color) { <option [value]="color.color">{{ t(color.name) }}</option> }</select></label>
               </td>
-              <td><label>Data (opcjonalnie)<input type="date" [(ngModel)]="entry.startDate" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="'Data początku: ' + entry.name"></label><label>Godzina (opcjonalnie)<input type="time" [(ngModel)]="entry.startTime" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="'Godzina początku: ' + entry.name"></label></td>
-              <td><label>Data (opcjonalnie)<input type="date" [(ngModel)]="entry.endDate" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="'Data końca: ' + entry.name"></label><label>Godzina<input type="time" required [(ngModel)]="entry.endTime" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="'Godzina końca: ' + entry.name"></label></td>
+              <td><label>{{ t('Data (opcjonalnie)') }}<input type="date" [(ngModel)]="entry.startDate" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Data początku: ') + entry.name"></label><label>{{ t('Godzina (opcjonalnie)') }}<input type="time" [(ngModel)]="entry.startTime" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Godzina początku: ') + entry.name"></label></td>
+              <td><label>{{ t('Data (opcjonalnie)') }}<input type="date" [(ngModel)]="entry.endDate" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Data końca: ') + entry.name"></label><label>{{ t('Godzina') }}<input type="time" required [(ngModel)]="entry.endTime" (ngModelChange)="processTimeChanged(entry)" [attr.aria-label]="t('Godzina końca: ') + entry.name"></label></td>
               <td><p class="range-status" [class.error]="item.timing.error">{{ item.status }}</p></td>
-              <td><button type="button" (click)="removeProcess(entry)" [attr.aria-label]="'Usuń: ' + entry.name">Usuń</button></td>
+              <td><button type="button" (click)="removeProcess(entry)" [attr.aria-label]="t('Usuń: ') + entry.name">{{ t('Usuń') }}</button></td>
             </tr>
           }
         </tbody>
       </table></div>
-      <button type="button" (click)="addProcess()">+ Dodaj pasek</button>
-      <p class="range-help">Zmiany są zapisywane automatycznie. Bez dat odliczanie dotyczy dzisiejszych godzin; wcześniejsza godzina końca oznacza następny dzień. Możesz podać tylko godzinę końca: pusty początek oznacza moment ustawienia odliczania, a miniona godzina końca — następny dzień. Data końca jest opcjonalna.</p>
+      <button type="button" (click)="addProcess()">{{ t('+ Dodaj pasek') }}</button>
+      <p class="range-help">{{ t('Zmiany są zapisywane automatycznie. Bez dat odliczanie dotyczy dzisiejszych godzin; wcześniejsza godzina końca oznacza następny dzień. Możesz podać tylko godzinę końca: pusty początek oznacza moment ustawienia odliczania, a miniona godzina końca — następny dzień. Data końca jest opcjonalna.') }}</p>
     </div>
   </section>
   <section id="stopwatchPanel" role="tabpanel" aria-labelledby="stopwatchTab" [hidden]="state.mode !== 'stopwatch'">
     <div class="range-form"><div class="table-scroll"><table class="range-table">
-      <caption>Odliczanie od</caption>
-      <thead><tr><th scope="col">Na zegarku</th><th scope="col">Nazwa</th><th scope="col">Początek</th><th scope="col">Widoczne jednostki</th><th scope="col">Upłynęło</th><th scope="col">Akcje</th></tr></thead>
+      <caption>{{ t('Odliczanie od') }}</caption>
+      <thead><tr><th scope="col">{{ t('Na zegarku') }}</th><th scope="col">{{ t('Nazwa') }}</th><th scope="col">{{ t('Początek') }}</th><th scope="col">{{ t('Widoczne jednostki') }}</th><th scope="col">{{ t('Upłynęło') }}</th><th scope="col">{{ t('Akcje') }}</th></tr></thead>
       <tbody>
         @for (item of vm.countFrom; track item.entry.id) {
           @let entry = item.entry;
           <tr [class.active-stopwatch]="state.activeCountFromId === entry.id">
-            <td><input type="radio" name="activeCountFrom" [value]="entry.id" [(ngModel)]="state.activeCountFromId" (ngModelChange)="changed()" [attr.aria-label]="'Pokaż na zegarku: ' + entry.name"></td>
-            <td><label>Nazwa<input type="text" maxlength="80" [(ngModel)]="entry.name" (ngModelChange)="changed()" [attr.aria-label]="'Nazwa odliczania ' + entry.id"></label></td>
-            <td><label>Data (opcjonalnie)<input type="date" [(ngModel)]="entry.startDate" (ngModelChange)="changed()" [attr.aria-label]="'Data początku (opcjonalnie): ' + entry.name"></label><label>Godzina (czas lokalny)<input type="time" step="1" required [(ngModel)]="entry.startTime" (ngModelChange)="changed()" [attr.aria-label]="'Godzina początku: ' + entry.name"></label><button type="button" (click)="startNow(entry)">Od teraz</button></td>
+            <td><input type="radio" name="activeCountFrom" [value]="entry.id" [(ngModel)]="state.activeCountFromId" (ngModelChange)="changed()" [attr.aria-label]="t('Pokaż na zegarku: ') + entry.name"></td>
+            <td><label>{{ t('Nazwa') }}<input type="text" maxlength="80" [(ngModel)]="entry.name" (ngModelChange)="changed()" [attr.aria-label]="t('Nazwa odliczania ') + entry.id"></label></td>
+            <td><label>{{ t('Data (opcjonalnie)') }}<input type="date" [(ngModel)]="entry.startDate" (ngModelChange)="changed()" [attr.aria-label]="t('Data początku (opcjonalnie): ') + entry.name"></label><label>{{ t('Godzina (czas lokalny)') }}<input type="time" step="1" required [(ngModel)]="entry.startTime" (ngModelChange)="changed()" [attr.aria-label]="t('Godzina początku: ') + entry.name"></label><button type="button" (click)="startNow(entry)">{{ t('Od teraz') }}</button></td>
             <td><app-unit-picker [selection]="entry.units" (selectionChange)="entry.units = $event; changed()" [label]="entry.name" [values]="item.values" /></td>
             <td><p class="range-status" [class.error]="!item.valid">{{ item.status }}</p></td>
-            <td><button type="button" (click)="removeCountFrom(entry)" [attr.aria-label]="'Usuń: ' + entry.name">Usuń</button></td>
+            <td><button type="button" (click)="removeCountFrom(entry)" [attr.aria-label]="t('Usuń: ') + entry.name">{{ t('Usuń') }}</button></td>
           </tr>
         }
       </tbody>
-    </table></div><button type="button" (click)="addCountFrom()">+ Dodaj pozycję</button>
-    <p class="range-help">Bez daty odliczanie biegnie od podanej godziny dzisiaj. Cykl pierścieni: sekundy / 60, minuty / 60, godziny / 24, dni / 7, tygodnie / 52, miesiące / 12, lata / 10. Miesiące i lata są liczone kalendarzowo. Liczby przy jednostkach pokazują całkowity upływ czasu.</p></div>
+    </table></div><button type="button" (click)="addCountFrom()">{{ t('+ Dodaj pozycję') }}</button>
+    <p class="range-help">{{ t('Bez daty odliczanie biegnie od podanej godziny dzisiaj. Cykl pierścieni: sekundy / 60, minuty / 60, godziny / 24, dni / 7, tygodnie / 52, miesiące / 12, lata / 10. Miesiące i lata są liczone kalendarzowo. Liczby przy jednostkach pokazują całkowity upływ czasu.') }}</p></div>
   </section>
   <section id="timerPanel" role="tabpanel" aria-labelledby="timerTab" [hidden]="state.mode !== 'timer'">
     <div class="range-form">
-      <div class="timer-readout" id="timerReadout" aria-label="Czas stopera">{{ formatTimer(vm.timerElapsed) }}</div>
+      <div class="timer-readout" id="timerReadout" [attr.aria-label]="t('Czas stopera')">{{ formatTimer(vm.timerElapsed) }}</div>
       <div class="timer-actions">
-        <button type="button" (click)="startTimer()" [disabled]="state.timer.status === 'running' || state.timer.status === 'paused'">Start</button>
-        <button type="button" (click)="pauseTimer()" [disabled]="state.timer.status !== 'running' && state.timer.status !== 'paused'">{{ state.timer.status === 'paused' ? 'Wznów' : 'Pauza' }}</button>
-        <button type="button" (click)="stopTimer()" [disabled]="state.timer.status !== 'running' && state.timer.status !== 'paused'">Stop</button>
-        <button type="button" (click)="lapTimer()" [disabled]="state.timer.status !== 'running'">Okrążenie</button>
+        <button type="button" (click)="startTimer()" [disabled]="state.timer.status === 'running' || state.timer.status === 'paused'">{{ t('Start') }}</button>
+        <button type="button" (click)="pauseTimer()" [disabled]="state.timer.status !== 'running' && state.timer.status !== 'paused'">{{ state.timer.status === 'paused' ? t('Wznów') : t('Pauza') }}</button>
+        <button type="button" (click)="stopTimer()" [disabled]="state.timer.status !== 'running' && state.timer.status !== 'paused'">{{ t('Stop') }}</button>
+        <button type="button" (click)="lapTimer()" [disabled]="state.timer.status !== 'running'">{{ t('Okrążenie') }}</button>
       </div>
       <div class="table-scroll"><table class="range-table">
-        <caption>Wyniki stopera</caption>
-        <thead><tr><th scope="col">Pomiar</th><th scope="col">Wynik</th><th scope="col">Czas łączny</th><th scope="col">Czas od poprzedniego wyniku</th></tr></thead>
-        <tbody>@for (result of state.timer.results; track result.id) { <tr><td>{{ result.session }}</td><td>{{ result.kind }}</td><td>{{ formatTimer(result.elapsed) }}</td><td>{{ formatTimer(result.split) }}</td></tr> }</tbody>
+        <caption>{{ t('Wyniki stopera') }}</caption>
+        <thead><tr><th scope="col">{{ t('Pomiar') }}</th><th scope="col">{{ t('Wynik') }}</th><th scope="col">{{ t('Czas łączny') }}</th><th scope="col">{{ t('Czas od poprzedniego wyniku') }}</th></tr></thead>
+        <tbody>@for (result of state.timer.results; track result.id) { <tr><td>{{ result.session }}</td><td>{{ resultKind(result.kind) }}</td><td>{{ formatTimer(result.elapsed) }}</td><td>{{ formatTimer(result.split) }}</td></tr> }</tbody>
       </table></div>
-      <p class="range-help">Pauza pomija czas przerwy; Wznów kontynuuje pomiar. Stop zapisuje wynik, a kolejny Start rozpoczyna nowy pomiar. Wyniki pozostają po ponownym uruchomieniu. Włączony stoper mierzy również czas zamknięcia aplikacji.</p>
+      <p class="range-help">{{ t('Pauza pomija czas przerwy; Wznów kontynuuje pomiar. Stop zapisuje wynik, a kolejny Start rozpoczyna nowy pomiar. Wyniki pozostają po ponownym uruchomieniu. Włączony stoper mierzy również czas zamknięcia aplikacji.') }}</p>
     </div>
   </section>
 </main>

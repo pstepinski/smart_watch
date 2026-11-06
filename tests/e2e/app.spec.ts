@@ -115,7 +115,7 @@ test('dane i uruchomiony stoper przetrwają zamknięcie oraz uruchomienie przegl
   const profile = testInfo.outputPath('profile');
   let context = await chromium.launchPersistentContext(profile, { headless: true });
   let page = await context.newPage();
-  await page.goto('http://localhost:4173');
+  await page.goto(testInfo.project.use.baseURL as string);
   await page.getByRole('tab', { name: 'Stoper', exact: true }).click();
   await page.getByRole('button', { name: 'Start', exact: true }).click();
   await expect.poll(() => timerValue(page)).toBeGreaterThan(.1);
@@ -123,7 +123,7 @@ test('dane i uruchomiony stoper przetrwają zamknięcie oraz uruchomienie przegl
   await context.close();
   context = await chromium.launchPersistentContext(profile, { headless: true });
   page = await context.newPage();
-  await page.goto('http://localhost:4173');
+  await page.goto(testInfo.project.use.baseURL as string);
   await expect(page.getByRole('tab', { name: 'Stoper', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect.poll(() => timerValue(page)).toBeGreaterThan(before);
   await context.close();
@@ -182,3 +182,53 @@ test('sama godzina celu zapisuje bieżący początek i zachowuje odliczanie po r
   await expect(page.locator('#digitalTime')).toHaveText('00:00:00');
   await expect(page.locator('#countdownPanel .range-status')).toContainText('Zakończono');
 });
+
+test('PL/EN tłumaczy interfejs, zapamiętuje wybór i zachowuje własne nazwy oraz wyniki', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('Analog × Digital · Edition 01', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('LIVE CLOCK', { exact: true })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Odliczanie do', exact: true }).click();
+  await page.getByLabel('Nazwa procesu 1', { exact: true }).fill('Mój projekt');
+  await page.getByLabel('Język interfejsu').selectOption('en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByRole('tab', { name: 'Countdown to', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByLabel('Process name 1', { exact: true })).toHaveValue('Mój projekt');
+  await expect(page.getByRole('status')).toContainText('Data is saved on this device.');
+  await expect(page.getByLabel('Colour: Mój projekt')).toContainText('Mint');
+  await page.getByLabel('End time: Mój projekt', { exact: true }).fill('');
+  await expect(page.locator('#countdownPanel .range-status')).toHaveText('Enter an end time.');
+  await page.getByRole('tab', { name: 'Count from', exact: true }).click();
+  await expect(page.getByLabel('Unit preset: Stoper 1')).toContainText('Time — hours, minutes, seconds');
+  await expect(page.getByRole('switch', { name: 'Stoper 1: Seconds', exact: true })).toBeChecked();
+  await page.getByRole('tab', { name: 'Stopwatch', exact: true }).click();
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await page.getByRole('button', { name: 'Lap', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Resume', exact: true })).toBeEnabled();
+  await expect(page.locator('#timerPanel tbody')).toContainText('Lap 1');
+  await page.reload();
+  await expect(page.locator('#languageSelect')).toHaveValue('en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByRole('button', { name: 'Resume', exact: true })).toBeEnabled();
+  await expect(page.locator('#timerPanel tbody')).toContainText('Lap 1');
+  await page.getByLabel('Interface language').selectOption('pl');
+  await expect(page.locator('#timerPanel tbody')).toContainText('Okrążenie 1');
+  await page.getByRole('tab', { name: 'Odliczanie do', exact: true }).click();
+  await expect(page.getByLabel('Nazwa procesu 1', { exact: true })).toHaveValue('Mój projekt');
+});
+
+for (const [locale, language, tab] of [['pl-PL', 'pl', 'Zegarek'], ['en-US', 'en', 'Clock'], ['de-DE', 'en', 'Clock']]) {
+  test.describe(`język przeglądarki ${locale}`, () => {
+    test.use({ locale });
+    test('wybiera domyślny język i zachowuje ręczny wybór po restarcie', async ({ page }) => {
+      await page.goto('/');
+      await expect(page.locator('html')).toHaveAttribute('lang', language);
+      await expect(page.getByRole('tab', { name: tab, exact: true })).toBeVisible();
+      const chosen = language === 'en' ? 'pl' : 'en';
+      await page.locator('#languageSelect').selectOption(chosen);
+      await page.reload();
+      await expect(page.locator('html')).toHaveAttribute('lang', chosen);
+      await expect(page.locator('#languageSelect')).toHaveValue(chosen);
+    });
+  });
+}

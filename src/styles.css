@@ -89,3 +89,6 @@ app-root { display: block; width: min(100%, 800px); }
 body { min-height: 100dvh; align-items: start; }
 body { grid-template-columns: minmax(0, 1fr); }
 app-root, .stage, .range-form { min-width: 0; }
+.language-picker { margin-top: 16px; font-size: 12px; color: #9bb0ba; }
+.language-picker select { margin-left: 10px; padding: 6px 10px; border: 1px solid #395762; border-radius: 7px; background: #07131d; color: var(--ice); font: inherit; }
+.language-picker select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

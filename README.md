@@ -1,6 +1,6 @@
 # HORIZON
 
-Aplikacja Angular PWA: zegarek analogowo-cyfrowy, odliczanie do wybranego momentu, odliczanie od wybranego momentu i stoper z pauzą oraz okrążeniami. Interfejs jest po polsku i działa również na telefonie.
+Aplikacja Angular PWA: zegarek analogowo-cyfrowy, odliczanie do wybranego momentu, odliczanie od wybranego momentu i stoper z pauzą oraz okrążeniami. Interfejs obsługuje język polski i angielski oraz działa na telefonie. Przy pierwszym uruchomieniu wybierany jest język przeglądarki: polski dla `pl`, angielski dla pozostałych języków. Wybór PL/EN nad zakładkami jest zapamiętywany na urządzeniu i ma pierwszeństwo przed językiem przeglądarki. Starsze dane bez zapisanego języka również korzystają z języka przeglądarki.
 
 ## Uruchomienie
 

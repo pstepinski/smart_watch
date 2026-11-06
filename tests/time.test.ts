@@ -1,3 +1,4 @@
+import { browserLanguage } from '../src/app/translations.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createState, clockUnits } from '../src/app/models.ts';
@@ -91,4 +92,42 @@ test('automatyczny początek przechodzi walidację zapisu, błędny znacznik jes
   assert.equal(isAppState(state), true);
   state.processes[0].automaticStart = -1;
   assert.equal(isAppState(state), false);
+});
+
+test('język jest zapisywany, a starsze dane bez języka zachowują stan i otrzymują PL', () => {
+  const state = createState();
+  state.language = 'en';
+  const data = new Map<string, string>();
+  const store = { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value); } };
+  saveState(store, state);
+  assert.equal(loadState(store).state.language, 'en');
+  const old: Record<string, unknown> = JSON.parse(JSON.stringify(state));
+  delete old['language'];
+  data.set(STORAGE_KEY, JSON.stringify(old));
+  const restored = loadState(store);
+  assert.equal(restored.error, '');
+  assert.equal(restored.state.language, 'pl');
+  assert.deepEqual(restored.state.processes, state.processes);
+  assert.equal(isAppState({ ...state, language: 'de' }), false);
+});
+test('format czasu i komunikaty walidacji obsługują język angielski', () => {
+  assert.equal(formatSelectedTime(new Date(2025, 0, 1), new Date(2026, 6, 1), [false, false, false, false, false, true, true], 'en'), '1y 6m');
+  const process = createState().processes[0]; process.endTime = '';
+  assert.equal(processTiming(process, new Date(), 'en').error, 'Enter an end time.');
+});
+
+
+test('język przeglądarki wybiera PL dla polskiego i EN dla pozostałych', () => {
+  assert.equal(browserLanguage('pl-PL'), 'pl');
+  assert.equal(browserLanguage('PL'), 'pl');
+  assert.equal(browserLanguage('en-US'), 'en');
+  assert.equal(browserLanguage('de-DE'), 'en');
+  assert.equal(browserLanguage(undefined), 'en');
+  const empty = { getItem: () => null, setItem: () => {} };
+  assert.equal(loadState(empty, new Date(), 'en').state.language, 'en');
+  const state = createState(); state.language = 'pl';
+  const saved = { getItem: () => JSON.stringify(state), setItem: () => {} };
+  assert.equal(loadState(saved, new Date(), 'en').state.language, 'pl');
+  const old: Record<string, unknown> = JSON.parse(JSON.stringify(state)); delete old['language'];
+  assert.equal(loadState({ ...saved, getItem: () => JSON.stringify(old) }, new Date(), 'en').state.language, 'en');
 });

@@ -37,6 +37,7 @@ export interface TimerState {
 }
 export interface AppState {
   version: 1;
+  language: 'pl' | 'en';
   mode: Mode;
   showDigital: boolean;
   countdownMode: 'all' | 'single';
@@ -74,12 +75,12 @@ export const clockUnits = (): boolean[] => [true, true, true, false, false, fals
 export const pad = (value: number): string => String(value).padStart(2, '0');
 export const localDate = (now: Date): string => `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 export const localTime = (now: Date): string => `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-export function createState(now = new Date()): AppState {
+export function createState(now = new Date(), language: 'pl' | 'en' = 'pl'): AppState {
   return {
-    version: 1, mode: 'clock', showDigital: true, countdownMode: 'all', countdownUnits: UNITS.map(() => true),
-    processes: [{ id: 1, name: 'Pasek 1', color: PALETTE[0].color, visible: true, startDate: '', endDate: '', startTime: '08:00', endTime: '16:00' }],
+    version: 1, language, mode: 'clock', showDigital: true, countdownMode: 'all', countdownUnits: UNITS.map(() => true),
+    processes: [{ id: 1, name: language === 'en' ? 'Process 1' : 'Pasek 1', color: PALETTE[0].color, visible: true, startDate: '', endDate: '', startTime: '08:00', endTime: '16:00' }],
     activeProcessId: 1, nextProcessId: 2,
-    countFrom: [{ id: 1, name: 'Stoper 1', startDate: localDate(now), startTime: localTime(now), units: clockUnits() }],
+    countFrom: [{ id: 1, name: language === 'en' ? 'Stopwatch 1' : 'Stoper 1', startDate: localDate(now), startTime: localTime(now), units: clockUnits() }],
     activeCountFromId: 1, nextCountFromId: 2,
     timer: { status: 'idle', accumulated: 0, startedAt: null, session: 0, lap: 0, lastResult: 0, nextResultId: 1, results: [] }
   };

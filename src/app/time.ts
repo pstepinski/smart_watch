@@ -1,3 +1,5 @@
+import { translate } from './translations.ts';
+import type { Language } from './translations.ts';
 import { localDate, pad } from './models.ts';
 import type { Process, UnitSelection, TimerState } from './models.ts';
 
@@ -22,7 +24,7 @@ export function elapsedValues(start: Date, end: Date): number[] {
   return [seconds, seconds / 60, seconds / 3600, seconds / 86400, seconds / 604800,
     calendarElapsed(start, end, 1), calendarElapsed(start, end, 12)];
 }
-export function formatSelectedTime(start: Date, end: Date, selected: UnitSelection): string {
+export function formatSelectedTime(start: Date, end: Date, selected: UnitSelection, language: Language = 'pl'): string {
   const parts = Array<number>(7).fill(0);
   if (end >= start) {
     const months = Math.floor(calendarElapsed(start, end, 1));
@@ -37,13 +39,13 @@ export function formatSelectedTime(start: Date, end: Date, selected: UnitSelecti
       remaining -= parts[index] * durations[index];
     }
   }
-  const suffixes: Record<number, string> = { 3: 'd', 4: 't', 5: 'm', 6: 'r' };
+  const suffixes: Record<number, string> = { 3: 'd', 4: language === 'en' ? 'w' : 't', 5: 'm', 6: language === 'en' ? 'y' : 'r' };
   const larger = [6, 5, 4, 3].filter(index => selected[index]).map(index => `${parts[index]}${suffixes[index]}`);
   const time = [2, 1, 0].filter(index => selected[index]).map(index => pad(parts[index])).join(':');
   return [...larger, ...(time ? [time] : [])].join(' ') || '—';
 }
 export interface ProcessTiming { start: Date; end: Date; error: string; progress: number; }
-export function processTiming(process: Process, now: Date): ProcessTiming {
+export function processTiming(process: Process, now: Date, language: Language = 'pl'): ProcessTiming {
   let error = '';
   const automatic = !process.startTime && !process.startDate;
   const origin = new Date(process.automaticStart ?? +now);
@@ -54,12 +56,12 @@ export function processTiming(process: Process, now: Date): ProcessTiming {
   const end = new Date(`${process.endDate || localDate(automatic ? origin : now)}T${process.endTime}`);
   if (!process.endDate && (end < start || (automatic && +end === +start))) end.setDate(end.getDate() + 1);
   if (!error && (!Number.isFinite(+start) || !Number.isFinite(+end) || end <= start)) error = 'Koniec musi przypadać po początku.';
-  return { start, end, error, progress: error ? 0 : Math.max(0, Math.min(1, (+now - +start) / (+end - +start))) };
+  return { start, end, error: translate(error, language), progress: error ? 0 : Math.max(0, Math.min(1, (+now - +start) / (+end - +start))) };
 }
-export function formatDuration(milliseconds: number): string {
+export function formatDuration(milliseconds: number, language: Language = 'pl'): string {
   const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
   const days = Math.floor(seconds / 86400);
-  return `${days ? days + ' dni ' : ''}${pad(Math.floor(seconds / 3600) % 24)}:${pad(Math.floor(seconds / 60) % 60)}:${pad(seconds % 60)}`;
+  return `${days ? days + (language === 'en' ? ' days ' : ' dni ') : ''}${pad(Math.floor(seconds / 3600) % 24)}:${pad(Math.floor(seconds / 60) % 60)}:${pad(seconds % 60)}`;
 }
 export function formatTimer(milliseconds: number): string {
   const ticks = Math.floor(Math.max(0, milliseconds) / 10);

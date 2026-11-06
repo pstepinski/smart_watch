@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { browserLanguage } from './translations';
 import { createState } from './models';
 import { loadState, saveState } from './persistence';
 
@@ -7,15 +8,16 @@ export class StateService {
   readonly error = signal('');
   readonly state;
   constructor() {
+    const language = browserLanguage(navigator.language);
     try {
-      const loaded = loadState(localStorage);
+      const loaded = loadState(localStorage, new Date(), language);
       this.state = loaded.state;
       for (const process of this.state.processes) {
         if (!process.startDate && !process.startTime && process.automaticStart === undefined) process.automaticStart = Date.now();
       }
       this.error.set(loaded.error || saveState(localStorage, this.state));
     } catch {
-      this.state = createState();
+      this.state = createState(new Date(), language);
       this.error.set('Zapis na urządzeniu jest niedostępny w tej przeglądarce.');
     }
   }

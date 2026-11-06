@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SwUpdate } from '@angular/service-worker';
+import { I18nService } from './i18n.service';
 import { StateService } from './state.service';
 import { UnitPickerComponent } from './unit-picker.component';
 import { clockUnits, localDate, localTime, PALETTE, UNITS } from './models';
@@ -20,6 +21,8 @@ interface InstallEvent extends Event {
 export class AppComponent implements OnDestroy {
   readonly storage = inject(StateService);
   readonly state = this.storage.state;
+  readonly i18n = inject(I18nService);
+  readonly t = (text: string) => this.i18n.t(text);
   readonly palette = PALETTE;
   readonly tabs: { id: Mode; label: string }[] = [
     { id: 'clock', label: 'Zegarek' }, { id: 'countdown', label: 'Odliczanie do' },
@@ -42,18 +45,19 @@ export class AppComponent implements OnDestroy {
   readonly formatTimer = formatTimer;
   readonly view = computed(() => {
     this.revision();
+    const language = this.i18n.language();
     const now = new Date(this.now());
     const processes = this.state.processes.map(entry => {
-      const timing = processTiming(entry, now);
-      const status = timing.error || (now < timing.start ? `Oczekiwanie na początek · do końca ${formatDuration(+timing.end - +now)}` :
-        timing.progress >= 1 ? 'Zakończono · 100%' : `Pozostało ${formatDuration(+timing.end - +now)} · ${Math.floor(timing.progress * 100)}%`);
+      const timing = processTiming(entry, now, language);
+      const status = timing.error || (now < timing.start ? `${this.t('Oczekiwanie na początek · do końca')} ${formatDuration(+timing.end - +now, language)}` :
+        timing.progress >= 1 ? this.t('Zakończono · 100%') : `${this.t('Pozostało')} ${formatDuration(+timing.end - +now, language)} · ${Math.floor(timing.progress * 100)}%`);
       return { entry, timing, status };
     });
     const countFrom = this.state.countFrom.map(entry => {
       const start = new Date(`${entry.startDate || localDate(now)}T${entry.startTime}`);
       const valid = Number.isFinite(+start);
       const values = valid ? elapsedValues(start, now) : null;
-      const status = !valid ? 'Podaj godzinę początku (data jest opcjonalna).' : now < start ? 'Oczekiwanie na wybrany moment.' : `Upłynęło: ${formatDuration(+now - +start)}`;
+      const status = !valid ? this.t('Podaj godzinę początku (data jest opcjonalna).') : now < start ? this.t('Oczekiwanie na wybrany moment.') : `${this.t('Upłynęło:')} ${formatDuration(+now - +start, language)}`;
       return { entry, start, valid, values, status };
     });
     let digitalTime = localTime(now);
@@ -71,23 +75,23 @@ export class AppComponent implements OnDestroy {
     } else if (this.state.mode === 'countdown') {
       compact = true;
       const active = processes.find(item => item.entry.id === this.state.activeProcessId);
-      digitalLabel = active?.entry.name.trim() || (active ? `Pasek ${active.entry.id}` : 'BRAK PROCESU');
-      digitalTime = !active ? 'Dodaj proces' : active.timing.error ? 'Błędny zakres' : '';
+      digitalLabel = active?.entry.name.trim() || (active ? `${this.t('Pasek')} ${active.entry.id}` : this.t('BRAK PROCESU'));
+      digitalTime = !active ? this.t('Dodaj proces') : active.timing.error ? this.t('Błędny zakres') : '';
       if (active && !active.timing.error) {
         const from = new Date(Math.min(+active.timing.end, Math.max(+now, +active.timing.start)));
-        digitalTime = formatSelectedTime(from, active.timing.end, this.state.countdownUnits);
+        digitalTime = formatSelectedTime(from, active.timing.end, this.state.countdownUnits, language);
         rings = this.unitRings(elapsedValues(from, active.timing.end), this.state.countdownUnits, true);
       }
     } else if (this.state.mode === 'stopwatch') {
       compact = true;
       const active = countFrom.find(item => item.entry.id === this.state.activeCountFromId);
-      digitalLabel = active?.entry.name.trim() || (active ? `Stoper ${active.entry.id}` : 'BRAK POZYCJI');
-      digitalTime = !active ? 'Dodaj pozycję' : !active.valid ? '—' : formatSelectedTime(active.start, now, active.entry.units);
+      digitalLabel = active?.entry.name.trim() || (active ? `${this.t('Stoper')} ${active.entry.id}` : this.t('BRAK POZYCJI'));
+      digitalTime = !active ? this.t('Dodaj pozycję') : !active.valid ? '—' : formatSelectedTime(active.start, now, active.entry.units, language);
       if (active?.values) rings = this.unitRings(active.values, active.entry.units);
     } else if (this.state.mode === 'timer') {
       compact = true;
       digitalTime = formatTimer(timerElapsed);
-      digitalLabel = this.state.timer.status === 'paused' ? 'PAUZA' : 'STOPER';
+      digitalLabel = this.state.timer.status === 'paused' ? this.t('PAUZA') : this.t('STOPER');
       rings = this.unitRings([timerElapsed / 1000, timerElapsed / 60000, timerElapsed / 3600000], clockUnits());
     }
     const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
@@ -95,7 +99,7 @@ export class AppComponent implements OnDestroy {
     return {
       processes, countFrom, rings, digitalTime, digitalLabel, compact, timerElapsed,
       secondAngle: `${seconds * 6}deg`, minuteAngle: `${minutes * 6}deg`, hourAngle: `${((now.getHours() % 12) + minutes / 60) * 30}deg`,
-      dateLabel: new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long', weekday: 'long' }).format(now)
+      dateLabel: new Intl.DateTimeFormat(language === 'en' ? 'en-GB' : 'pl-PL', { day: 'numeric', month: 'long', weekday: 'long' }).format(now)
     };
   });
   constructor() {
@@ -127,7 +131,7 @@ export class AppComponent implements OnDestroy {
   }
   addProcess(): void {
     const id = this.state.nextProcessId++;
-    this.state.processes.push({ id, name: `Pasek ${id}`, color: PALETTE[(id - 1) % PALETTE.length].color, visible: true, startDate: '', endDate: '', startTime: '08:00', endTime: '16:00' });
+    this.state.processes.push({ id, name: `${this.t('Pasek')} ${id}`, color: PALETTE[(id - 1) % PALETTE.length].color, visible: true, startDate: '', endDate: '', startTime: '08:00', endTime: '16:00' });
     this.state.activeProcessId ??= id;
     this.changed();
   }
@@ -144,7 +148,7 @@ export class AppComponent implements OnDestroy {
   addCountFrom(): void {
     const id = this.state.nextCountFromId++;
     const now = new Date();
-    this.state.countFrom.push({ id, name: `Stoper ${id}`, startDate: localDate(now), startTime: localTime(now), units: clockUnits() });
+    this.state.countFrom.push({ id, name: `${this.t('Stoper')} ${id}`, startDate: localDate(now), startTime: localTime(now), units: clockUnits() });
     this.state.activeCountFromId ??= id;
     this.changed();
   }
@@ -214,6 +218,10 @@ export class AppComponent implements OnDestroy {
     await event.prompt();
     await event.userChoice;
     this.installPrompt.set(null);
+  }
+  resultKind(kind: string): string {
+    const lap = /^Okrążenie (\d+)$/.exec(kind);
+    return lap ? `${this.t('Okrążenie')} ${lap[1]}` : this.t(kind);
   }
   reload(): void { window.location.reload(); }
   ngOnDestroy(): void {
