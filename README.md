@@ -19,6 +19,7 @@ Zegarek analogowo-cyfrowy, odliczanie do i od wybranego momentu, stoper z okrą�
 - [PWA: instalacja, offline i aktualizacje](#pwa-instalacja-offline-i-aktualizacje)
 - [Testy i odtwarzanie zrzutów ekranu](#testy-i-odtwarzanie-zrzutów-ekranu)
 - [Struktura projektu](#struktura-projektu)
+- [Licencja](#licencja)
 
 ## Uruchomienie projektu
 
@@ -474,3 +475,10 @@ Zestaw obejmuje popup zgody, wszystkie pięć zakładek, oba widoki „Odliczani
 | `scripts/screenshots.ts`, `docs/screenshots/` | Odtwarzalne zrzuty dokumentacji. |
 
 Poprzednia jednoplikowa wersja `smart_watch.html` jest dostępna w historii Git. Obecnym punktem wejścia aplikacji jest `src/main.ts`.
+
+## Licencja
+
+Projekt jest udostępniany na licencji MIT. Copyright (c) 2026 Piotr Stępiński.
+
+- [Oryginalny tekst licencji MIT](LICENSE).
+- [Informacyjne tłumaczenie na język polski](LICENSE.pl.md).
